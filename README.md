@@ -1,7 +1,5 @@
 # Kai Pool
 
-> An AI for Good project about reducing food waste from farm to fork.
-
 Created for the AUT South Campus AI Hackathon 2026.
 
 ## About
