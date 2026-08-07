@@ -17,6 +17,17 @@ export default function RootLayout() {
             headerShadowVisible: false,
           }}
         />
+        <Stack.Screen
+          name="marketplace/[listingId]"
+          options={{
+            headerShown: true,
+            title: "Giveaway details",
+            headerBackTitle: "Marketplace",
+            headerTintColor: "#28764a",
+            headerStyle: { backgroundColor: "#f3f1e9" },
+            headerShadowVisible: false,
+          }}
+        />
       </Stack>
     </AuthProvider>
   );

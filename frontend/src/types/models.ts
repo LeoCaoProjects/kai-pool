@@ -76,6 +76,13 @@ export type CollaborativeMeal = {
   imageAttribution: string | null;
 };
 
+export type MarketplaceFoodItem = Omit<FoodItem, "ownerId"> & {
+  ownerId: number;
+  ownerName: string;
+  distanceKm: number | null;
+  claimedAt: string | null;
+};
+
 export type AuthResponse = {
   token: string;
   user: User;

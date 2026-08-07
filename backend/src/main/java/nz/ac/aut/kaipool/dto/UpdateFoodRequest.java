@@ -7,7 +7,7 @@ import nz.ac.aut.kaipool.domain.FoodAvailability;
 
 public record UpdateFoodRequest(
         @NotBlank @Size(max = 150) String name,
-        @Size(max = 2048) String imageUrl,
+        @Size(max = 9_000_000) String imageUrl,
         @Size(max = 100) String quantity,
         @NotNull FoodAvailability availability) {
 }

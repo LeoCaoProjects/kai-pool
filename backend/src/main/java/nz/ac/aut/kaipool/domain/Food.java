@@ -30,6 +30,7 @@ public class Food {
     @Column(nullable = false)
     private String name;
 
+    @Column(columnDefinition = "TEXT")
     private String imageUrl;
 
     private String quantity;
@@ -40,6 +41,12 @@ public class Food {
 
     @Column(nullable = false, updatable = false)
     private Instant createdAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "claimed_by_id")
+    private User claimedBy;
+
+    private Instant claimedAt;
 
     protected Food() {
     }
@@ -105,5 +112,21 @@ public class Food {
 
     public Instant getCreatedAt() {
         return createdAt;
+    }
+
+    public User getClaimedBy() {
+        return claimedBy;
+    }
+
+    public void setClaimedBy(User claimedBy) {
+        this.claimedBy = claimedBy;
+    }
+
+    public Instant getClaimedAt() {
+        return claimedAt;
+    }
+
+    public void setClaimedAt(Instant claimedAt) {
+        this.claimedAt = claimedAt;
     }
 }

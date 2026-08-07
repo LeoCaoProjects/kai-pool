@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
 import nz.ac.aut.kaipool.dto.CreateFoodRequest;
 import nz.ac.aut.kaipool.dto.FoodResponse;
+import nz.ac.aut.kaipool.dto.MarketplaceFoodResponse;
 import nz.ac.aut.kaipool.dto.UpdateFoodRequest;
 import nz.ac.aut.kaipool.service.FoodService;
 
@@ -28,6 +29,26 @@ public class FoodController {
 
     public FoodController(FoodService foodService) {
         this.foodService = foodService;
+    }
+
+    @GetMapping("/marketplace")
+    public List<MarketplaceFoodResponse> getMarketplaceFoods(Principal principal) {
+        return foodService.getMarketplaceFoods(principal.getName());
+    }
+
+    @GetMapping("/marketplace/claimed")
+    public List<MarketplaceFoodResponse> getClaimedListings(Principal principal) {
+        return foodService.getClaimedListings(principal.getName());
+    }
+
+    @GetMapping("/marketplace/{id}")
+    public MarketplaceFoodResponse getMarketplaceFood(Principal principal, @PathVariable Long id) {
+        return foodService.getMarketplaceFood(principal.getName(), id);
+    }
+
+    @PostMapping("/marketplace/{id}/claim")
+    public MarketplaceFoodResponse claimMarketplaceFood(Principal principal, @PathVariable Long id) {
+        return foodService.claimMarketplaceFood(principal.getName(), id);
     }
 
     @GetMapping

@@ -229,6 +229,69 @@ class FoundationApiTests {
     }
 
     @Test
+    void giveawayCanBeBrowsedClaimedOnceAndFoundInMyClaims() throws Exception {
+        RegisteredUser owner = registerUser("Giveaway Owner", "giveaway-owner@kaipool.nz");
+        RegisteredUser claimant = registerUser("Claimant", "claimant@kaipool.nz");
+        RegisteredUser secondClaimant = registerUser("Second Claimant", "second-claimant@kaipool.nz");
+        completeProfile(owner, -36.990, 174.860, "Māori");
+        completeProfile(claimant, -36.985, 174.865, "Samoan");
+        completeProfile(secondClaimant, -36.984, 174.866, "Tongan");
+
+        long giveawayId = addFood(owner, "Fresh lemons", "6", "GIVEAWAY");
+        addFood(owner, "Private rice", "1 bag", "PRIVATE");
+        addFood(owner, "Shared chicken", "1 kg", "COOK_TOGETHER");
+
+        mockMvc.perform(get("/api/foods/marketplace")
+                        .header("Authorization", "Bearer " + claimant.token()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].id").value(giveawayId))
+                .andExpect(jsonPath("$[0].name").value("Fresh lemons"))
+                .andExpect(jsonPath("$[0].ownerName").value("Giveaway Owner"))
+                .andExpect(jsonPath("$[0].distanceKm").isNumber());
+
+        mockMvc.perform(post("/api/foods/marketplace/{id}/claim", giveawayId)
+                        .header("Authorization", "Bearer " + claimant.token()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.claimedAt").isNotEmpty());
+
+        mockMvc.perform(get("/api/foods/marketplace")
+                        .header("Authorization", "Bearer " + secondClaimant.token()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(0));
+
+        mockMvc.perform(post("/api/foods/marketplace/{id}/claim", giveawayId)
+                        .header("Authorization", "Bearer " + secondClaimant.token()))
+                .andExpect(status().isConflict());
+
+        mockMvc.perform(get("/api/foods/marketplace/claimed")
+                        .header("Authorization", "Bearer " + claimant.token()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].id").value(giveawayId))
+                .andExpect(jsonPath("$[0].claimedAt").isNotEmpty());
+    }
+
+    @Test
+    void marketplaceExcludesOwnAndDistantGiveaways() throws Exception {
+        RegisteredUser viewer = registerUser("Viewer", "market-viewer@kaipool.nz");
+        RegisteredUser nearbyOwner = registerUser("Nearby", "nearby-owner@kaipool.nz");
+        RegisteredUser distantOwner = registerUser("Distant", "distant-owner@kaipool.nz");
+        completeProfile(viewer, -36.990, 174.860, "Māori");
+        completeProfile(nearbyOwner, -36.980, 174.870, "Samoan");
+        completeProfile(distantOwner, -37.500, 174.860, "Tongan");
+        addFood(viewer, "My apples", "4", "GIVEAWAY");
+        long nearbyId = addFood(nearbyOwner, "Nearby bread", "1 loaf", "GIVEAWAY");
+        addFood(distantOwner, "Distant milk", "1 bottle", "GIVEAWAY");
+
+        mockMvc.perform(get("/api/foods/marketplace")
+                        .header("Authorization", "Bearer " + viewer.token()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].id").value(nearbyId));
+    }
+
+    @Test
     void nearbyUsersAreRankedByComplementaryCookTogetherFood() throws Exception {
         RegisteredUser chef = registerUser("Chef", "chef@kaipool.nz");
         RegisteredUser strongMatch = registerUser("Strong Match", "strong@kaipool.nz");
@@ -354,14 +417,16 @@ class FoundationApiTests {
                 .andExpect(status().isOk());
     }
 
-    private void addFood(RegisteredUser user, String name, String quantity, String availability) throws Exception {
-        mockMvc.perform(post("/api/foods")
+    private long addFood(RegisteredUser user, String name, String quantity, String availability) throws Exception {
+        MvcResult result = mockMvc.perform(post("/api/foods")
                         .header("Authorization", "Bearer " + user.token())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"name":"%s","quantity":"%s","availability":"%s"}
                                 """.formatted(name, quantity, availability)))
-                .andExpect(status().isCreated());
+                .andExpect(status().isCreated())
+                .andReturn();
+        return ((Number) JsonPath.read(result.getResponse().getContentAsString(), "$.id")).longValue();
     }
 
     private ResultActions register(String name, String email) throws Exception {
