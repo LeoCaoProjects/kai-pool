@@ -39,10 +39,14 @@ export type FoodContribution = {
 
 export type MealPreview = {
   mealName: string;
+  description: string;
   culturalOrigin: string;
   ingredientsFromYou: string[];
   ingredientsFromThem: string[];
   optionalMissingIngredients: string[];
+  imageUrl: string | null;
+  imageSource: string | null;
+  imageAttribution: string | null;
 };
 
 export type CookingMatch = {
@@ -61,11 +65,15 @@ export type CookingMatch = {
 
 export type CollaborativeMeal = {
   mealName: string;
+  description: string;
   culturalOriginOrInspiration: string;
   ingredientsFromYou: string[];
   ingredientsFromThem: string[];
   optionalMissingIngredients: string[];
   cookingInstructions: string[];
+  imageUrl: string | null;
+  imageSource: string | null;
+  imageAttribution: string | null;
 };
 
 export type AuthResponse = {

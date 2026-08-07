@@ -36,7 +36,7 @@ class CollaborativeRecipeServiceTests {
         MatchContext context = matchContext();
         when(matchingService.getRequiredMatch("chef@example.com", 2L)).thenReturn(context);
 
-        var service = new CollaborativeRecipeService(matchingService, generator, cache);
+        var service = service(matchingService, generator, cache);
         List<CollaborativeMealResponse> meals = service.generateForMatch("chef@example.com", 2L);
 
         assertThat(captured[0].currentUserIngredients()).containsExactly("Chicken");
@@ -54,14 +54,18 @@ class CollaborativeRecipeServiceTests {
         CollaborativeRecipeCache cache = emptyCache();
         CollaborativeRecipeGenerator generator = request -> List.of(new CollaborativeMealResponse(
                 "Invented feast",
+                "An invented meal.",
                 "AI",
                 List.of("Dragon fruit"),
                 List.of("Moon cheese"),
                 List.of(),
-                List.of("Serve.")));
+                List.of("Serve."),
+                null,
+                null,
+                null));
         when(matchingService.getRequiredMatch("chef@example.com", 2L)).thenReturn(matchContext());
 
-        var service = new CollaborativeRecipeService(matchingService, generator, cache);
+        var service = service(matchingService, generator, cache);
         List<CollaborativeMealResponse> meals = service.generateForMatch("chef@example.com", 2L);
 
         assertThat(meals).hasSize(3);
@@ -81,7 +85,7 @@ class CollaborativeRecipeServiceTests {
         when(matchingService.getRequiredMatch("chef@example.com", 2L)).thenReturn(context);
         when(cache.get(org.mockito.ArgumentMatchers.any())).thenReturn(Optional.of(List.of(validGeneratedMeal())));
 
-        var service = new CollaborativeRecipeService(matchingService, generator, cache);
+        var service = service(matchingService, generator, cache);
         List<CollaborativeMealResponse> meals = service.generateForMatch("chef@example.com", 2L);
 
         assertThat(meals).hasSize(1);
@@ -93,6 +97,16 @@ class CollaborativeRecipeServiceTests {
         CollaborativeRecipeCache cache = mock(CollaborativeRecipeCache.class);
         when(cache.get(org.mockito.ArgumentMatchers.any())).thenReturn(Optional.empty());
         return cache;
+    }
+
+    private CollaborativeRecipeService service(
+            MatchingService matchingService,
+            CollaborativeRecipeGenerator generator,
+            CollaborativeRecipeCache cache) {
+        MealVisualService visualService = mock(MealVisualService.class);
+        when(visualService.addImages(org.mockito.ArgumentMatchers.any()))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+        return new CollaborativeRecipeService(matchingService, generator, cache, visualService);
     }
 
     private MatchContext matchContext() {
@@ -116,10 +130,14 @@ class CollaborativeRecipeServiceTests {
     private CollaborativeMealResponse validGeneratedMeal() {
         return new CollaborativeMealResponse(
                 "Chicken and egg rice",
+                "A savoury shared rice dish.",
                 "Chinese-inspired",
                 List.of("Chicken"),
                 List.of("Rice", "Eggs"),
                 List.of("Spring onion"),
-                List.of("Prepare ingredients.", "Cook thoroughly.", "Combine and serve."));
+                List.of("Prepare ingredients.", "Cook thoroughly.", "Combine and serve."),
+                "https://example.com/meal.jpg",
+                "Test",
+                "Test photo");
     }
 }

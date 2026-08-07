@@ -4,8 +4,12 @@ import java.util.List;
 
 public record MealPreviewResponse(
         String mealName,
+        String description,
         String culturalOrigin,
         List<String> ingredientsFromYou,
         List<String> ingredientsFromThem,
-        List<String> optionalMissingIngredients) {
+        List<String> optionalMissingIngredients,
+        String imageUrl,
+        String imageSource,
+        String imageAttribution) {
 }

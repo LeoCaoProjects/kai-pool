@@ -21,7 +21,7 @@ import tools.jackson.databind.ObjectMapper;
 @Component
 public class CollaborativeRecipeCache {
 
-    private static final String CACHE_VERSION = "collaborative-recipes-v1";
+    private static final String CACHE_VERSION = "collaborative-recipes-v2-with-images";
 
     private final CollaborativeRecipeCacheRepository repository;
     private final ObjectMapper objectMapper;

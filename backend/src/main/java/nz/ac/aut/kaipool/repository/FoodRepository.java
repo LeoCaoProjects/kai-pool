@@ -13,4 +13,6 @@ public interface FoodRepository extends JpaRepository<Food, Long> {
 
     List<Food> findByOwnerIdAndAvailabilityOrderByCreatedAtDesc(
             Long ownerId, FoodAvailability availability);
+
+    List<Food> findByAvailabilityOrderByCreatedAtDesc(FoodAvailability availability);
 }

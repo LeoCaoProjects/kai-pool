@@ -27,14 +27,17 @@ public class CollaborativeRecipeService {
     private final MatchingService matchingService;
     private final CollaborativeRecipeGenerator recipeGenerator;
     private final CollaborativeRecipeCache recipeCache;
+    private final MealVisualService mealVisualService;
 
     public CollaborativeRecipeService(
             MatchingService matchingService,
             CollaborativeRecipeGenerator recipeGenerator,
-            CollaborativeRecipeCache recipeCache) {
+            CollaborativeRecipeCache recipeCache,
+            MealVisualService mealVisualService) {
         this.matchingService = matchingService;
         this.recipeGenerator = recipeGenerator;
         this.recipeCache = recipeCache;
+        this.mealVisualService = mealVisualService;
     }
 
     public synchronized List<CollaborativeMealResponse> generateForMatch(String email, Long matchedUserId) {
@@ -70,7 +73,8 @@ public class CollaborativeRecipeService {
                 .forEach(meal -> meals.putIfAbsent(normalizeKey(meal.mealName()), meal));
 
         fallbackMeals(match).forEach(meal -> meals.putIfAbsent(normalizeKey(meal.mealName()), meal));
-        List<CollaborativeMealResponse> result = meals.values().stream().limit(TARGET_MEAL_COUNT).toList();
+        List<CollaborativeMealResponse> result = mealVisualService.addImages(
+                meals.values().stream().limit(TARGET_MEAL_COUNT).toList());
         recipeCache.put(request, result);
         return reverseForRequester ? flipOwnership(result) : result;
     }
@@ -105,11 +109,15 @@ public class CollaborativeRecipeService {
     private static List<CollaborativeMealResponse> flipOwnership(List<CollaborativeMealResponse> meals) {
         return meals.stream().map(meal -> new CollaborativeMealResponse(
                 meal.mealName(),
+                meal.description(),
                 meal.culturalOriginOrInspiration(),
                 meal.ingredientsFromThem(),
                 meal.ingredientsFromYou(),
                 meal.optionalMissingIngredients(),
-                meal.cookingInstructions())).toList();
+                meal.cookingInstructions(),
+                meal.imageUrl(),
+                meal.imageSource(),
+                meal.imageAttribution())).toList();
     }
 
     private CollaborativeMealResponse cleanGeneratedMeal(
@@ -130,46 +138,65 @@ public class CollaborativeRecipeService {
         }
         return new CollaborativeMealResponse(
                 cleanText(meal.mealName(), 100),
+                blank(meal.description())
+                        ? "A collaborative meal built around ingredients from both food pools."
+                        : cleanText(meal.description(), 240),
                 blank(meal.culturalOriginOrInspiration())
                         ? "Shared kitchen inspiration"
                         : cleanText(meal.culturalOriginOrInspiration(), 120),
                 yours,
                 theirs,
                 missingOnly(meal.optionalMissingIngredients(), yourFoods, theirFoods),
-                instructions);
+                instructions,
+                null,
+                null,
+                null);
     }
 
     private List<CollaborativeMealResponse> fallbackMeals(MatchContext match) {
         List<CollaborativeMealResponse> meals = new ArrayList<>();
         match.usefulMeals().forEach(scored -> meals.add(new CollaborativeMealResponse(
                 scored.template().name(),
+                "A practical " + scored.template().name().toLowerCase(Locale.ROOT)
+                        + " made collaboratively from both food pools.",
                 scored.template().culture(),
                 foodNames(scored.foodsFromYou()),
                 foodNames(scored.foodsFromThem()),
                 scored.optionalMissingIngredients(),
-                standardInstructions(foodNames(scored.foodsFromYou()), foodNames(scored.foodsFromThem())))));
+                standardInstructions(foodNames(scored.foodsFromYou()), foodNames(scored.foodsFromThem())),
+                null,
+                null,
+                null)));
 
         List<String> yours = foodNames(match.currentUserFoods()).stream().limit(3).toList();
         List<String> theirs = foodNames(match.otherUserFoods()).stream().limit(3).toList();
         if (meals.size() < TARGET_MEAL_COUNT) {
             meals.add(new CollaborativeMealResponse(
                     "Shared ingredient bowl",
+                    "A flexible bowl that combines the best ingredients from both food pools.",
                     "Flexible home-style",
                     yours,
                     theirs,
                     missingOnly(List.of("rice", "a favourite sauce"),
                             match.currentUserFoods(), match.otherUserFoods()),
-                    standardInstructions(yours, theirs)));
+                    standardInstructions(yours, theirs),
+                    null,
+                    null,
+                    null));
         }
         if (meals.size() < TARGET_MEAL_COUNT) {
             meals.add(new CollaborativeMealResponse(
                     "Collaborative skillet meal",
+                    "A quick one-pan meal designed to use what both cooks already have.",
                     "Flexible shared-kitchen inspiration",
                     yours,
                     theirs,
                     missingOnly(List.of("onion or garlic", "seasoning to taste"),
                             match.currentUserFoods(), match.otherUserFoods()),
-                    standardInstructions(yours, theirs)));
+                    standardInstructions(yours, theirs),
+                    null,
+                    null,
+                    null));
         }
         return meals;
     }

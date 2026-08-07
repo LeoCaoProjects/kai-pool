@@ -5,7 +5,19 @@ import { AuthProvider } from "../src/features/auth/AuthContext";
 export default function RootLayout() {
   return (
     <AuthProvider>
-      <Stack screenOptions={{ headerShown: false }} />
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen
+          name="match/[matchedUserId]"
+          options={{
+            headerShown: true,
+            title: "Cooking match",
+            headerBackTitle: "Matches",
+            headerTintColor: "#28764a",
+            headerStyle: { backgroundColor: "#f3f1e9" },
+            headerShadowVisible: false,
+          }}
+        />
+      </Stack>
     </AuthProvider>
   );
 }

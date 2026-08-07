@@ -12,6 +12,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import nz.ac.aut.kaipool.domain.Food;
 import nz.ac.aut.kaipool.domain.FoodAvailability;
 import nz.ac.aut.kaipool.domain.User;
+import nz.ac.aut.kaipool.config.DevelopmentSeedData.TestFoodSeed;
+import nz.ac.aut.kaipool.config.DevelopmentSeedData.TestUserSeed;
 import nz.ac.aut.kaipool.repository.FoodRepository;
 import nz.ac.aut.kaipool.repository.UserRepository;
 
@@ -25,7 +27,7 @@ public class DevelopmentDataConfig {
             FoodRepository foodRepository,
             PasswordEncoder passwordEncoder) {
         return args -> {
-            String passwordHash = passwordEncoder.encode("password123");
+            String passwordHash = passwordEncoder.encode("123456");
             User aroha = upsertDemoUser(userRepository, "Aroha Ngata", "aroha@kaipool.nz", passwordHash,
                     Set.of("Māori"), Set.of("Samoan", "Tongan"), -36.9917, 174.8615);
             User sione = upsertDemoUser(userRepository, "Sione Ma'afu", "sione@kaipool.nz", passwordHash,
@@ -48,6 +50,14 @@ public class DevelopmentDataConfig {
             seedFoodIfEmpty(foodRepository, mei, List.of(
                     new Food(mei, "Eggs", null, "12", FoodAvailability.COOK_TOGETHER),
                     new Food(mei, "Spring onions", null, "2 bunches", FoodAvailability.GIVEAWAY)));
+
+            for (TestUserSeed seed : DevelopmentSeedData.testUsers()) {
+                User testUser = upsertTestUser(userRepository, seed, passwordHash);
+                User savedTestUser = userRepository.save(testUser);
+                seedFoodIfEmpty(foodRepository, savedTestUser, seed.foods().stream()
+                        .map(food -> toFood(savedTestUser, food))
+                        .toList());
+            }
         };
     }
 
@@ -77,5 +87,23 @@ public class DevelopmentDataConfig {
         if (foodRepository.findByOwnerIdOrderByCreatedAtDesc(user.getId()).isEmpty()) {
             foodRepository.saveAll(foods);
         }
+    }
+
+    private User upsertTestUser(UserRepository userRepository, TestUserSeed seed, String passwordHash) {
+        User user = userRepository.findByEmailIgnoreCase(seed.email())
+                .orElseGet(() -> new User(seed.name(), seed.email(), passwordHash));
+        user.setName(seed.name());
+        user.setPasswordHash(passwordHash);
+        user.setBio(seed.bio());
+        user.setLatitude(seed.latitude());
+        user.setLongitude(seed.longitude());
+        user.setFoodCultures(seed.foodCultures());
+        user.setFoodCulturesToExplore(seed.foodCulturesToExplore());
+        user.setOnboardingCompleted(true);
+        return user;
+    }
+
+    private Food toFood(User owner, TestFoodSeed seed) {
+        return new Food(owner, seed.name(), null, seed.quantity(), seed.availability());
     }
 }

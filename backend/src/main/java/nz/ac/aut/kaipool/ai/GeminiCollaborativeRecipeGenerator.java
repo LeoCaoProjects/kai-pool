@@ -62,6 +62,7 @@ public class GeminiCollaborativeRecipeGenerator implements CollaborativeRecipeGe
                 Put anything else only in optionalMissingIngredients. Keep missing items short and genuinely optional where possible.
                 Use the users' self-selected food cultures only as respectful inspiration; do not infer ethnicity or identity.
                 Give 3 to 6 short, safe cooking steps for each meal. Mention cooking meat and eggs thoroughly when relevant.
+                Include one appetising, factual description under 200 characters. Do not claim an ingredient is present unless listed.
 
                 User A's COOK_TOGETHER ingredients: %s
                 User A's selected food cultures: %s
@@ -79,13 +80,14 @@ public class GeminiCollaborativeRecipeGenerator implements CollaborativeRecipeGe
                 "type", "object",
                 "properties", Map.of(
                         "mealName", Map.of("type", "string"),
+                        "description", Map.of("type", "string"),
                         "culturalOriginOrInspiration", Map.of("type", "string"),
                         "ingredientsFromYou", stringArray,
                         "ingredientsFromThem", stringArray,
                         "optionalMissingIngredients", stringArray,
                         "cookingInstructions", stringArray),
                 "required", List.of(
-                        "mealName", "culturalOriginOrInspiration", "ingredientsFromYou", "ingredientsFromThem",
+                        "mealName", "description", "culturalOriginOrInspiration", "ingredientsFromYou", "ingredientsFromThem",
                         "optionalMissingIngredients", "cookingInstructions"),
                 "additionalProperties", false);
         Map<String, Object> schema = Map.of(

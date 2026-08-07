@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -26,7 +27,9 @@ import com.jayway.jsonpath.JsonPath;
 
 import nz.ac.aut.kaipool.repository.FoodRepository;
 import nz.ac.aut.kaipool.repository.CollaborativeRecipeCacheRepository;
+import nz.ac.aut.kaipool.repository.MealImageAssetRepository;
 import nz.ac.aut.kaipool.repository.UserRepository;
+import nz.ac.aut.kaipool.service.MealImageAssetService;
 
 @SpringBootTest
 @ActiveProfiles("test")
@@ -42,6 +45,12 @@ class FoundationApiTests {
     private CollaborativeRecipeCacheRepository collaborativeRecipeCacheRepository;
 
     @Autowired
+    private MealImageAssetRepository mealImageAssetRepository;
+
+    @Autowired
+    private MealImageAssetService mealImageAssetService;
+
+    @Autowired
     private UserRepository userRepository;
 
     private MockMvc mockMvc;
@@ -50,6 +59,7 @@ class FoundationApiTests {
     void setUp() {
         mockMvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
         collaborativeRecipeCacheRepository.deleteAll();
+        mealImageAssetRepository.deleteAll();
         foodRepository.deleteAll();
         userRepository.deleteAll();
     }
@@ -248,7 +258,17 @@ class FoundationApiTests {
                 .andExpect(jsonPath("$[0].yourContributions.length()").value(1))
                 .andExpect(jsonPath("$[0].yourContributions[0].name").value("Chicken"))
                 .andExpect(jsonPath("$[0].theirContributions[0].name").value("Rice"))
-                .andExpect(jsonPath("$[0].possibleMeals[0].mealName").value("Chicken fried rice"));
+                .andExpect(jsonPath("$[0].possibleMeals[0].mealName").value("Chicken fried rice"))
+                .andExpect(jsonPath("$[0].possibleMeals[0].description").isNotEmpty())
+                .andExpect(jsonPath("$[0].possibleMeals[0].imageUrl").value(
+                        org.hamcrest.Matchers.startsWith("https://www.themealdb.com/")))
+                .andExpect(jsonPath("$[0].possibleMeals[0].imageAttribution").isNotEmpty());
+
+        mockMvc.perform(get("/api/matches/{id}", strongMatch.id())
+                        .header("Authorization", "Bearer " + chef.token()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.matchedUserId").value(strongMatch.id()))
+                .andExpect(jsonPath("$.possibleMeals[0].description").isNotEmpty());
     }
 
     @Test
@@ -266,10 +286,14 @@ class FoundationApiTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(3))
                 .andExpect(jsonPath("$[0].mealName").isNotEmpty())
+                .andExpect(jsonPath("$[0].description").isNotEmpty())
                 .andExpect(jsonPath("$[0].culturalOriginOrInspiration").isNotEmpty())
                 .andExpect(jsonPath("$[0].ingredientsFromYou[0]").value("Chicken"))
                 .andExpect(jsonPath("$[0].ingredientsFromThem").isArray())
-                .andExpect(jsonPath("$[0].cookingInstructions.length()").value(4));
+                .andExpect(jsonPath("$[0].cookingInstructions.length()").value(4))
+                .andExpect(jsonPath("$[0].imageUrl").value(
+                        org.hamcrest.Matchers.startsWith("https://www.themealdb.com/")))
+                .andExpect(jsonPath("$[0].imageAttribution").isNotEmpty());
 
         mockMvc.perform(post("/api/matches/{id}/recipes", chef.id())
                         .header("Authorization", "Bearer " + friend.token()))
@@ -279,6 +303,17 @@ class FoundationApiTests {
                 .andExpect(jsonPath("$[0].ingredientsFromThem[0]").value("Chicken"));
 
         org.assertj.core.api.Assertions.assertThat(collaborativeRecipeCacheRepository.count()).isEqualTo(1);
+    }
+
+    @Test
+    void generatedMealImagesCanBeServedFromThePersistentImageCache() throws Exception {
+        String path = mealImageAssetService.store("Test meal", "image/png", new byte[] { 1, 2, 3, 4 });
+
+        mockMvc.perform(get(path))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Type", "image/png"))
+                .andExpect(header().string("Cache-Control", org.hamcrest.Matchers.containsString("max-age")))
+                .andExpect(content().bytes(new byte[] { 1, 2, 3, 4 }));
     }
 
     @Test

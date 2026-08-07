@@ -7,6 +7,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -22,6 +23,7 @@ import nz.ac.aut.kaipool.exception.ResourceNotFoundException;
 import nz.ac.aut.kaipool.repository.FoodRepository;
 import nz.ac.aut.kaipool.repository.UserRepository;
 import nz.ac.aut.kaipool.service.CollaborativeMealCatalog.ScoredMeal;
+import nz.ac.aut.kaipool.service.MealVisualCatalog.MealVisual;
 import nz.ac.aut.kaipool.util.GeoUtils;
 
 @Service
@@ -31,6 +33,7 @@ public class MatchingService {
     private final FoodRepository foodRepository;
     private final UserRepository userRepository;
     private final UserService userService;
+    private final MealVisualCatalog mealVisualCatalog;
     private final double maxDistanceKm;
 
     public MatchingService(
@@ -38,11 +41,13 @@ public class MatchingService {
             FoodRepository foodRepository,
             UserRepository userRepository,
             UserService userService,
+            MealVisualCatalog mealVisualCatalog,
             @Value("${app.matching.max-distance-km:30}") double maxDistanceKm) {
         this.mealCatalog = mealCatalog;
         this.foodRepository = foodRepository;
         this.userRepository = userRepository;
         this.userService = userService;
+        this.mealVisualCatalog = mealVisualCatalog;
         this.maxDistanceKm = Math.max(1, maxDistanceKm);
     }
 
@@ -59,19 +64,28 @@ public class MatchingService {
                 .orElseThrow(() -> new ResourceNotFoundException("Cooking match not found"));
     }
 
+    @Transactional(readOnly = true)
+    public CookingMatchResponse getMatch(String email, Long matchedUserId) {
+        return getRequiredMatch(email, matchedUserId).response();
+    }
+
     private List<MatchContext> findMatchContexts(String email) {
         User currentUser = userService.getRequiredByEmail(email);
         if (!hasLocation(currentUser)) {
             return List.of();
         }
 
-        List<Food> currentFoods = cookTogetherFoods(currentUser);
+        Map<Long, List<Food>> foodsByOwner = foodRepository
+                .findByAvailabilityOrderByCreatedAtDesc(FoodAvailability.COOK_TOGETHER)
+                .stream()
+                .collect(Collectors.groupingBy(food -> food.getOwner().getId()));
+        List<Food> currentFoods = foodsByOwner.getOrDefault(currentUser.getId(), List.of());
         if (currentFoods.isEmpty()) {
             return List.of();
         }
 
         List<MatchContext> matches = new ArrayList<>();
-        for (User candidate : userRepository.findAll()) {
+        for (User candidate : userRepository.findAllWithCultures()) {
             if (candidate.getId().equals(currentUser.getId()) || !hasLocation(candidate)) {
                 continue;
             }
@@ -82,7 +96,7 @@ public class MatchingService {
                 continue;
             }
 
-            List<Food> candidateFoods = cookTogetherFoods(candidate);
+            List<Food> candidateFoods = foodsByOwner.getOrDefault(candidate.getId(), List.of());
             if (candidateFoods.isEmpty()) {
                 continue;
             }
@@ -135,12 +149,7 @@ public class MatchingService {
                 reason,
                 yours.values().stream().map(MatchingService::toContribution).toList(),
                 theirs.values().stream().map(MatchingService::toContribution).toList(),
-                meals.stream().map(MatchingService::toPreview).toList());
-    }
-
-    private List<Food> cookTogetherFoods(User user) {
-        return foodRepository.findByOwnerIdAndAvailabilityOrderByCreatedAtDesc(
-                user.getId(), FoodAvailability.COOK_TOGETHER);
+                meals.stream().map(this::toPreview).toList());
     }
 
     private static boolean hasLocation(User user) {
@@ -160,13 +169,18 @@ public class MatchingService {
         return new FoodContributionResponse(food.getId(), food.getName(), food.getQuantity(), food.getImageUrl());
     }
 
-    private static MealPreviewResponse toPreview(ScoredMeal meal) {
+    private MealPreviewResponse toPreview(ScoredMeal meal) {
+        MealVisual visual = mealVisualCatalog.forMeal(meal.template().name());
         return new MealPreviewResponse(
                 meal.template().name(),
+                mealVisualCatalog.descriptionFor(meal.template().name()),
                 meal.template().culture(),
                 meal.foodsFromYou().stream().map(Food::getName).toList(),
                 meal.foodsFromThem().stream().map(Food::getName).toList(),
-                meal.optionalMissingIngredients());
+                meal.optionalMissingIngredients(),
+                visual.imageUrl(),
+                visual.source(),
+                visual.attribution());
     }
 
     private static String joinNames(List<Food> foods) {

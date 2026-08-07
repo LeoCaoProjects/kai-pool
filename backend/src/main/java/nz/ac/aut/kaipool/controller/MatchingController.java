@@ -33,6 +33,13 @@ public class MatchingController {
         return matchingService.findMatches(principal.getName());
     }
 
+    @GetMapping("/{matchedUserId}")
+    public CookingMatchResponse getMatch(
+            Principal principal,
+            @PathVariable Long matchedUserId) {
+        return matchingService.getMatch(principal.getName(), matchedUserId);
+    }
+
     @PostMapping("/{matchedUserId}/recipes")
     public List<CollaborativeMealResponse> getRecipes(
             Principal principal,
