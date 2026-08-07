@@ -8,6 +8,7 @@ export type User = {
   longitude: number | null;
   foodCultures: string[];
   foodCulturesToExplore: string[];
+  onboardingCompleted: boolean;
   createdAt: string;
 };
 
@@ -24,7 +25,7 @@ export type FoodItem = {
   ownerId: number;
   name: string;
   imageUrl: string | null;
-  quantity: string;
+  quantity: string | null;
   availability: FoodAvailability;
   createdAt: string;
 };

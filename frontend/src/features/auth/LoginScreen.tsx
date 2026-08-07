@@ -18,7 +18,7 @@ export default function LoginScreen() {
     setError("");
     try {
       await login({ email, password });
-      router.replace("/(tabs)/home");
+      router.replace("/");
     } catch (caught) {
       setError(caught instanceof ApiError ? caught.message : "Could not sign in");
     } finally {

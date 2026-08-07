@@ -19,11 +19,12 @@ export type UpdateUserRequest = {
   longitude: number | null;
   foodCultures: string[];
   foodCulturesToExplore: string[];
+  onboardingCompleted: boolean;
 };
 
 export type FoodRequest = {
   name: string;
   imageUrl: string | null;
-  quantity: string;
+  quantity: string | null;
   availability: FoodAvailability;
 };

@@ -54,7 +54,8 @@ class FoundationApiTests {
         register("Test User", "test@kaipool.nz")
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.token").isNotEmpty())
-                .andExpect(jsonPath("$.user.email").value("test@kaipool.nz"));
+                .andExpect(jsonPath("$.user.email").value("test@kaipool.nz"))
+                .andExpect(jsonPath("$.user.onboardingCompleted").value(false));
 
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -63,6 +64,43 @@ class FoundationApiTests {
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.token").isNotEmpty());
+    }
+
+    @Test
+    void currentUserCanCompleteAndReadProfile() throws Exception {
+        MvcResult registration = register("Profile User", "profile@kaipool.nz")
+                .andExpect(status().isCreated())
+                .andReturn();
+        String token = JsonPath.read(registration.getResponse().getContentAsString(), "$.token");
+
+        mockMvc.perform(put("/api/users/me")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name":"  Profile User  ",
+                                  "bio":"I like sharing family recipes.",
+                                  "profileImageUrl":"https://example.com/profile.jpg",
+                                  "latitude":-36.8523,
+                                  "longitude":174.7634,
+                                  "foodCultures":["Māori","Italian"],
+                                  "foodCulturesToExplore":["Samoan"],
+                                  "onboardingCompleted":true
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Profile User"))
+                .andExpect(jsonPath("$.latitude").value(-36.85))
+                .andExpect(jsonPath("$.longitude").value(174.76))
+                .andExpect(jsonPath("$.foodCultures[0]").value("Māori"))
+                .andExpect(jsonPath("$.foodCulturesToExplore[0]").value("Samoan"))
+                .andExpect(jsonPath("$.onboardingCompleted").value(true));
+
+        mockMvc.perform(get("/api/users/me")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.bio").value("I like sharing family recipes."))
+                .andExpect(jsonPath("$.onboardingCompleted").value(true));
     }
 
     @Test
@@ -128,6 +166,24 @@ class FoundationApiTests {
         mockMvc.perform(delete("/api/foods/{id}", foodId.longValue())
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void foodQuantityIsOptional() throws Exception {
+        MvcResult registration = register("Food Owner", "optional-quantity@kaipool.nz")
+                .andExpect(status().isCreated())
+                .andReturn();
+        String token = JsonPath.read(registration.getResponse().getContentAsString(), "$.token");
+
+        mockMvc.perform(post("/api/foods")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"Apples","imageUrl":"https://example.com/apples.jpg","availability":"PRIVATE"}
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.quantity").doesNotExist())
+                .andExpect(jsonPath("$.imageUrl").value("https://example.com/apples.jpg"));
     }
 
     @Test

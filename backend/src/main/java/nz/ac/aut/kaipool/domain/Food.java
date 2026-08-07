@@ -32,7 +32,6 @@ public class Food {
 
     private String imageUrl;
 
-    @Column(nullable = false)
     private String quantity;
 
     @Enumerated(EnumType.STRING)

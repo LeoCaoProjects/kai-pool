@@ -20,6 +20,12 @@
           "cameraPermission": "Allow Kai Pool to take a food photo.",
           "microphonePermission": false
         }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Allow Kai Pool to use your approximate location for local matches."
+        }
       ]
     ]
   }

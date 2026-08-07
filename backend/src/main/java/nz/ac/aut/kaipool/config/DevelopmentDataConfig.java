@@ -66,6 +66,7 @@ public class DevelopmentDataConfig {
         user.setLongitude(longitude);
         user.setFoodCultures(foodCultures);
         user.setFoodCulturesToExplore(foodCulturesToExplore);
+        user.setOnboardingCompleted(true);
         return user;
     }
 }
