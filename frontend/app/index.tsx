@@ -1,36 +1,18 @@
-import { StyleSheet, Text, View } from "react-native";
+import { Redirect } from "expo-router";
+import { Text, View } from "react-native";
 
-import { API_BASE_URL } from "../src/config/api";
+import { useAuth } from "../src/features/auth/AuthContext";
 
-export default function HomeScreen() {
-  return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Kai Pool</Text>
-      <Text style={styles.subtitle}>The hackathon development environment is ready.</Text>
-      {__DEV__ && <Text style={styles.apiUrl}>API: {API_BASE_URL}</Text>}
-    </View>
-  );
+export default function Index() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", padding: 16 }}>
+        <Text>Loading...</Text>
+      </View>
+    );
+  }
+
+  return <Redirect href={user ? "/(tabs)/home" : "/login"} />;
 }
-
-const styles = StyleSheet.create({
-  container: {
-    alignItems: "center",
-    flex: 1,
-    gap: 16,
-    justifyContent: "center",
-    padding: 24,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: "600",
-    textAlign: "center",
-  },
-  subtitle: {
-    fontSize: 16,
-    textAlign: "center",
-  },
-  apiUrl: {
-    color: "#555",
-    textAlign: "center",
-  },
-});

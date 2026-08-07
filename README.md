@@ -7,8 +7,9 @@ Created for the AUT South Campus AI Hackathon 2026.
 Kai Pool is our team project for the hackathon's food-waste challenge.
 We will choose the final product direction during the event.
 
-This repository contains the starting environment for the frontend and
-backend. It does not include a database, authentication, or an AI provider yet.
+This repository contains the shared user, authentication, food-pool, API,
+and navigation foundation. AI recognition, matching, and marketplace features
+are not implemented yet.
 
 ## Built with
 
@@ -18,13 +19,15 @@ backend. It does not include a database, authentication, or an AI provider yet.
 - Java 21
 - Spring Boot
 - Gradle
+- PostgreSQL
 
 ## Running locally
 
-Node.js, npm, Java 21, and Git are required. Expo Go is useful for testing
-on a phone.
+Node.js, npm, Java 21, PostgreSQL, and Git are required. Expo Go is useful
+for testing on a phone.
 
-Start the backend:
+Create a PostgreSQL database named `kai_pool`. Set the variables from
+`backend/.env.example` in your terminal, then start the backend:
 
 ```bash
 cd backend
@@ -32,6 +35,9 @@ cd backend
 ```
 
 On Windows, use `./gradlew.bat bootRun` instead.
+
+Use the `dev` profile to add the demo accounts and food below. Existing data
+is left unchanged.
 
 In a second terminal, start the frontend:
 
@@ -50,6 +56,15 @@ address with the local IPv4 address of the computer running the backend.
 
 Keep the phone and computer on the same network, then restart Expo. Do not
 commit the `.env` file.
+
+## Demo accounts
+
+All demo accounts use the password `password123`:
+
+- `aroha@kaipool.nz`
+- `sione@kaipool.nz`
+- `priya@kaipool.nz`
+- `mei@kaipool.nz`
 
 ## Team workflow
 
