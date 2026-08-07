@@ -8,6 +8,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 
 import nz.ac.aut.kaipool.dto.ErrorResponse;
 
@@ -40,5 +42,23 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ForbiddenException.class)
     ResponseEntity<ErrorResponse> handleForbidden(ForbiddenException exception) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new ErrorResponse(exception.getMessage()));
+    }
+
+    @ExceptionHandler({InvalidImageException.class, MissingServletRequestPartException.class})
+    ResponseEntity<ErrorResponse> handleInvalidImage(Exception exception) {
+        String message = exception instanceof InvalidImageException
+                ? exception.getMessage()
+                : "Choose an image before analysing it.";
+        return ResponseEntity.badRequest().body(new ErrorResponse(message));
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    ResponseEntity<ErrorResponse> handleImageTooLarge() {
+        return ResponseEntity.badRequest().body(new ErrorResponse("The image must be 10 MB or smaller."));
+    }
+
+    @ExceptionHandler(FoodRecognitionException.class)
+    ResponseEntity<ErrorResponse> handleRecognition(FoodRecognitionException exception) {
+        return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(new ErrorResponse(exception.getMessage()));
     }
 }

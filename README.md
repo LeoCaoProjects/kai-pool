@@ -23,39 +23,19 @@ are not implemented yet.
 
 ## Running locally
 
-Node.js, npm, Java 21, PostgreSQL, and Git are required. Expo Go is useful
-for testing on a phone.
+Node.js, npm, Java 21, and Git are required.
 
-Create a PostgreSQL database named `kai_pool`. Set the variables from
-`backend/.env.example` in your terminal, then start the backend:
+Create `backend/.env` from `backend/.env.example` once, then add the Supabase
+Session pooler details and OpenAI API key. After that, run this from the project
+folder on Windows:
 
-```bash
-cd backend
-./gradlew bootRun
+```powershell
+.\start.cmd
 ```
 
-On Windows, use `./gradlew.bat bootRun` instead.
-
-Use the `dev` profile to add the demo accounts and food below. Existing data
-is left unchanged.
-
-In a second terminal, start the frontend:
-
-```bash
-cd frontend
-npm install
-npm start
-```
-
-You can also use `npm run android`, `npm run ios`, or `npm run web`.
-
-## Using a phone
-
-Copy `frontend/.env.example` to `frontend/.env`. Replace the example IP
-address with the local IPv4 address of the computer running the backend.
-
-Keep the phone and computer on the same network, then restart Expo. Do not
-commit the `.env` file.
+This starts the backend, waits for it, detects the computer's local IP, and
+starts Expo. Scan the displayed QR code with the iPhone Camera app. Keep the
+computer and phone on the same network.
 
 ## Demo accounts
 

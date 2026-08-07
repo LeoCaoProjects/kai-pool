@@ -12,7 +12,15 @@
       "predictiveBackGestureEnabled": false
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Kai Pool to choose a food photo.",
+          "cameraPermission": "Allow Kai Pool to take a food photo.",
+          "microphonePermission": false
+        }
+      ]
     ]
   }
 }

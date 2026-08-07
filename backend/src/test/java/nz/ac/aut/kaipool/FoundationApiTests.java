@@ -72,6 +72,20 @@ class FoundationApiTests {
     }
 
     @Test
+    void scanRejectsMissingImage() throws Exception {
+        MvcResult registration = register("Scanner", "scanner@kaipool.nz")
+                .andExpect(status().isCreated())
+                .andReturn();
+        String token = JsonPath.read(registration.getResponse().getContentAsString(), "$.token");
+
+        mockMvc.perform(post("/api/scan")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.MULTIPART_FORM_DATA))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Choose an image before analysing it."));
+    }
+
+    @Test
     void expoWebDevelopmentOriginCanMakeCorsRequests() throws Exception {
         mockMvc.perform(options("/api/foods")
                         .header("Origin", "http://localhost:8081")
