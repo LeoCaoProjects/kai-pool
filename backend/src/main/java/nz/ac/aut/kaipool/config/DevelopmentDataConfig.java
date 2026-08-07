@@ -31,13 +31,13 @@ public class DevelopmentDataConfig {
 
             String passwordHash = passwordEncoder.encode("password123");
             User aroha = createUser("Aroha Ngata", "aroha@kaipool.nz", passwordHash,
-                    Set.of("Māori"), Set.of("Samoan", "Tongan"));
+                    Set.of("Māori"), Set.of("Samoan", "Tongan"), -36.9917, 174.8615);
             User sione = createUser("Sione Ma'afu", "sione@kaipool.nz", passwordHash,
-                    Set.of("Tongan"), Set.of("Māori", "Indian"));
+                    Set.of("Tongan"), Set.of("Māori", "Indian"), -36.9892, 174.8660);
             User priya = createUser("Priya Patel", "priya@kaipool.nz", passwordHash,
-                    Set.of("Indian"), Set.of("Māori", "Samoan"));
+                    Set.of("Indian"), Set.of("Māori", "Samoan"), -36.9943, 174.8554);
             User mei = createUser("Mei Chen", "mei@kaipool.nz", passwordHash,
-                    Set.of("Chinese"), Set.of("Tongan", "Indian"));
+                    Set.of("Chinese"), Set.of("Tongan", "Indian"), -36.9875, 174.8589);
 
             userRepository.saveAll(List.of(aroha, sione, priya, mei));
             foodRepository.saveAll(List.of(
@@ -57,9 +57,13 @@ public class DevelopmentDataConfig {
             String email,
             String passwordHash,
             Set<String> foodCultures,
-            Set<String> foodCulturesToExplore) {
+            Set<String> foodCulturesToExplore,
+            double latitude,
+            double longitude) {
         User user = new User(name, email, passwordHash);
         user.setBio("Demo account for Kai Pool development.");
+        user.setLatitude(latitude);
+        user.setLongitude(longitude);
         user.setFoodCultures(foodCultures);
         user.setFoodCulturesToExplore(foodCulturesToExplore);
         return user;

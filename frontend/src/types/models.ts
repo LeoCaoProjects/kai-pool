@@ -29,6 +29,13 @@ export type FoodItem = {
   createdAt: string;
 };
 
+export type MarketplaceFoodItem = Omit<FoodItem, "ownerId"> & {
+  ownerId: number;
+  ownerName: string;
+  latitude: number;
+  longitude: number;
+};
+
 export type AuthResponse = {
   token: string;
   user: User;

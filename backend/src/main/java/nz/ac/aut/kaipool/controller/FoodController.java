@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 import jakarta.validation.Valid;
 import nz.ac.aut.kaipool.dto.CreateFoodRequest;
 import nz.ac.aut.kaipool.dto.FoodResponse;
+import nz.ac.aut.kaipool.dto.MarketplaceFoodResponse;
 import nz.ac.aut.kaipool.dto.UpdateFoodRequest;
 import nz.ac.aut.kaipool.service.FoodService;
 
@@ -28,6 +29,11 @@ public class FoodController {
 
     public FoodController(FoodService foodService) {
         this.foodService = foodService;
+    }
+
+    @GetMapping("/marketplace")
+    public List<MarketplaceFoodResponse> getMarketplaceFoods() {
+        return foodService.getMarketplaceFoods();
     }
 
     @GetMapping

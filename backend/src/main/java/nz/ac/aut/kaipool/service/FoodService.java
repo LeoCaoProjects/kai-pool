@@ -9,6 +9,7 @@ import nz.ac.aut.kaipool.domain.Food;
 import nz.ac.aut.kaipool.domain.User;
 import nz.ac.aut.kaipool.dto.CreateFoodRequest;
 import nz.ac.aut.kaipool.dto.FoodResponse;
+import nz.ac.aut.kaipool.dto.MarketplaceFoodResponse;
 import nz.ac.aut.kaipool.dto.UpdateFoodRequest;
 import nz.ac.aut.kaipool.exception.ForbiddenException;
 import nz.ac.aut.kaipool.exception.ResourceNotFoundException;
@@ -36,6 +37,17 @@ public class FoodService {
     @Transactional(readOnly = true)
     public FoodResponse getFood(String email, Long id) {
         return toResponse(getOwnedFood(email, id));
+    }
+
+    /**
+     * Returns listings whose owners have chosen a map location on their profile.
+     * Email, biography, and other private profile fields are intentionally omitted.
+     */
+    @Transactional(readOnly = true)
+    public List<MarketplaceFoodResponse> getMarketplaceFoods() {
+        return foodRepository.findMarketplaceFoodsWithOwnerLocation().stream()
+                .map(this::toMarketplaceResponse)
+                .toList();
     }
 
     @Transactional
@@ -83,5 +95,20 @@ public class FoodService {
                 food.getQuantity(),
                 food.getAvailability(),
                 food.getCreatedAt());
+    }
+
+    private MarketplaceFoodResponse toMarketplaceResponse(Food food) {
+        User owner = food.getOwner();
+        return new MarketplaceFoodResponse(
+                food.getId(),
+                food.getName(),
+                food.getImageUrl(),
+                food.getQuantity(),
+                food.getAvailability(),
+                food.getCreatedAt(),
+                owner.getId(),
+                owner.getName(),
+                owner.getLatitude(),
+                owner.getLongitude());
     }
 }
