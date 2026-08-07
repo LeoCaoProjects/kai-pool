@@ -44,8 +44,8 @@ public class FoodService {
         Food food = new Food(
                 owner,
                 request.name().trim(),
-                request.imageUrl(),
-                request.quantity().trim(),
+                normalizeImageUrl(request.imageUrl()),
+                normalizeQuantity(request.quantity()),
                 request.availability());
         return toResponse(foodRepository.save(food));
     }
@@ -54,8 +54,8 @@ public class FoodService {
     public FoodResponse updateFood(String email, Long id, UpdateFoodRequest request) {
         Food food = getOwnedFood(email, id);
         food.setName(request.name().trim());
-        food.setImageUrl(request.imageUrl());
-        food.setQuantity(request.quantity().trim());
+        food.setImageUrl(normalizeImageUrl(request.imageUrl()));
+        food.setQuantity(normalizeQuantity(request.quantity()));
         food.setAvailability(request.availability());
         return toResponse(foodRepository.save(food));
     }
@@ -72,6 +72,22 @@ public class FoodService {
             throw new ForbiddenException("You cannot change another user's food");
         }
         return food;
+    }
+
+    private static String normalizeQuantity(String quantity) {
+        if (quantity == null) {
+            return null;
+        }
+        String trimmed = quantity.trim();
+        return trimmed.isEmpty() ? null : trimmed;
+    }
+
+    private static String normalizeImageUrl(String imageUrl) {
+        if (imageUrl == null) {
+            return null;
+        }
+        String trimmed = imageUrl.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
     private FoodResponse toResponse(Food food) {

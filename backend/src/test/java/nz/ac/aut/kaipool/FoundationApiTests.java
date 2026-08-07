@@ -143,6 +143,45 @@ class FoundationApiTests {
                 .andExpect(status().isForbidden());
     }
 
+    @Test
+    void foodCanBeCreatedWithoutQuantity() throws Exception {
+        MvcResult registration = register("Minimal Owner", "minimal@kaipool.nz")
+                .andExpect(status().isCreated())
+                .andReturn();
+        String token = JsonPath.read(registration.getResponse().getContentAsString(), "$.token");
+
+        mockMvc.perform(post("/api/foods")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"Rice","availability":"PRIVATE"}
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.quantity").isEmpty());
+    }
+
+    @Test
+    void recipeSuggestionsUseAuthenticatedUsersFoodPool() throws Exception {
+        MvcResult registration = register("Chef", "chef@kaipool.nz")
+                .andExpect(status().isCreated())
+                .andReturn();
+        String token = JsonPath.read(registration.getResponse().getContentAsString(), "$.token");
+
+        mockMvc.perform(post("/api/foods")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"chicken","quantity":"2","availability":"COOK_TOGETHER"}
+                                """))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(get("/api/recipes/suggestions")
+                        .header("Authorization", "Bearer " + token)
+                        .param("limit", "5"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray());
+    }
+
     private ResultActions register(String name, String email) throws Exception {
         return mockMvc.perform(post("/api/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)

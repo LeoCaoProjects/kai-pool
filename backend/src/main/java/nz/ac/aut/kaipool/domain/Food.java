@@ -30,9 +30,9 @@ public class Food {
     @Column(nullable = false)
     private String name;
 
+    @Column(length = 2048)
     private String imageUrl;
 
-    @Column(nullable = false)
     private String quantity;
 
     @Enumerated(EnumType.STRING)

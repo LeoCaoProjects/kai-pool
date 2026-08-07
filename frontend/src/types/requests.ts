@@ -24,6 +24,15 @@ export type UpdateUserRequest = {
 export type FoodRequest = {
   name: string;
   imageUrl: string | null;
-  quantity: string;
+  quantity: string | null;
   availability: FoodAvailability;
+};
+
+export type RecipeSuggestion = {
+  culture: string;
+  recipeName: string;
+  description: string;
+  matchedIngredients: string[];
+  missingIngredients: string[];
+  matchPercent: number;
 };
