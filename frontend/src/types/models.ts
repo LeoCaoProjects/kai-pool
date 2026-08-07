@@ -25,7 +25,7 @@ export type FoodItem = {
   ownerId: number;
   name: string;
   imageUrl: string | null;
-  quantity: string;
+  quantity: string | null;
   availability: FoodAvailability;
   createdAt: string;
 };

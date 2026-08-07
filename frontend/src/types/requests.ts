@@ -25,6 +25,6 @@ export type UpdateUserRequest = {
 export type FoodRequest = {
   name: string;
   imageUrl: string | null;
-  quantity: string;
+  quantity: string | null;
   availability: FoodAvailability;
 };

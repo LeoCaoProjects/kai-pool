@@ -169,6 +169,24 @@ class FoundationApiTests {
     }
 
     @Test
+    void foodQuantityIsOptional() throws Exception {
+        MvcResult registration = register("Food Owner", "optional-quantity@kaipool.nz")
+                .andExpect(status().isCreated())
+                .andReturn();
+        String token = JsonPath.read(registration.getResponse().getContentAsString(), "$.token");
+
+        mockMvc.perform(post("/api/foods")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"Apples","imageUrl":"https://example.com/apples.jpg","availability":"PRIVATE"}
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.quantity").doesNotExist())
+                .andExpect(jsonPath("$.imageUrl").value("https://example.com/apples.jpg"));
+    }
+
+    @Test
     void userCannotDeleteAnotherUsersFood() throws Exception {
         MvcResult ownerRegistration = register("Owner", "owner@kaipool.nz")
                 .andExpect(status().isCreated())

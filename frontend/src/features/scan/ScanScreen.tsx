@@ -134,8 +134,8 @@ export default function ScanScreen() {
       setError("Add at least one food item before saving.");
       return;
     }
-    if (items.some((item) => !item.name.trim() || !item.quantity.trim())) {
-      setError("Each item needs a name and quantity.");
+    if (items.some((item) => !item.name.trim())) {
+      setError("Each item needs a name.");
       return;
     }
 
@@ -144,7 +144,7 @@ export default function ScanScreen() {
     try {
       await Promise.all(items.map((item) => createFood({
         name: item.name.trim(),
-        quantity: item.quantity.trim(),
+        quantity: item.quantity.trim() || null,
         imageUrl: null,
         availability: "PRIVATE",
       })));
