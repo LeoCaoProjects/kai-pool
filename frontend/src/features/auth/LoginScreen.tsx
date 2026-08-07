@@ -20,7 +20,11 @@ export default function LoginScreen() {
       await login({ email, password });
       router.replace("/");
     } catch (caught) {
-      setError(caught instanceof ApiError ? caught.message : "Could not sign in");
+      setError(
+        caught instanceof ApiError
+          ? caught.message
+          : "Could not reach the server. Check that the backend is running and your devices are on the same network.",
+      );
     } finally {
       setSubmitting(false);
     }
