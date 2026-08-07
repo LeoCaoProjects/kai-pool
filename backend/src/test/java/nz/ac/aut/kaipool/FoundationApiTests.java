@@ -182,6 +182,15 @@ class FoundationApiTests {
                 .andExpect(jsonPath("$").isArray());
     }
 
+    @Test
+    void recipePreviewLetsAnyoneTestIngredientsWithoutPersistingFood() throws Exception {
+        mockMvc.perform(get("/api/recipes/preview")
+                        .param("ingredients", "chicken,kumara")
+                        .param("limit", "5"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray());
+    }
+
     private ResultActions register(String name, String email) throws Exception {
         return mockMvc.perform(post("/api/auth/register")
                 .contentType(MediaType.APPLICATION_JSON)

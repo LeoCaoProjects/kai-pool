@@ -36,6 +36,20 @@ cd backend
 
 On Windows, use `./gradlew.bat bootRun` instead.
 
+To try the recipe tester without installing PostgreSQL, start the backend with its
+in-memory local database. Its data is discarded when the backend stops:
+
+```bash
+cd backend
+./gradlew bootRun --args="--spring.profiles.active=local"
+```
+
+On Windows PowerShell:
+
+```powershell
+.\gradlew.bat bootRun --args="--spring.profiles.active=local"
+```
+
 Use the `dev` profile to add the demo accounts and food below. Existing data
 is left unchanged.
 

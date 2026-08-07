@@ -1,6 +1,7 @@
 package nz.ac.aut.kaipool.controller;
 
 import java.security.Principal;
+import java.util.Arrays;
 import java.util.List;
 
 import org.springframework.web.bind.annotation.GetMapping;
@@ -25,5 +26,19 @@ public class RecipeController {
     public List<RecipeSuggestionResponse> getSuggestions(
             Principal principal, @RequestParam(defaultValue = "8") int limit) {
         return recipeSuggestionService.suggestForCurrentUser(principal.getName(), limit);
+    }
+
+    /**
+     * Read-only algorithm preview for trying the bundled food catalog without creating an account.
+     * Ingredients are supplied as a comma-separated list and are never stored.
+     */
+    @GetMapping("/preview")
+    public List<RecipeSuggestionResponse> previewSuggestions(
+            @RequestParam String ingredients, @RequestParam(defaultValue = "8") int limit) {
+        List<String> poolItems = Arrays.stream(ingredients.split(","))
+                .map(String::trim)
+                .filter(item -> !item.isEmpty())
+                .toList();
+        return recipeSuggestionService.suggestForPool(poolItems, limit);
     }
 }
