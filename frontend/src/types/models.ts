@@ -83,6 +83,32 @@ export type MarketplaceFoodItem = Omit<FoodItem, "ownerId"> & {
   claimedAt: string | null;
 };
 
+export type CookingConnectionStatus = "PENDING" | "ACCEPTED" | "DECLINED";
+
+export type CookingConnection = {
+  id: number;
+  status: CookingConnectionStatus;
+  incoming: boolean;
+  otherUserId: number;
+  otherUserName: string;
+  otherUserBio: string | null;
+  otherUserProfileImageUrl: string | null;
+  otherUserFoodCultures: string[];
+  contactEmail: string | null;
+  meetingPlace: string | null;
+  meetingTime: string | null;
+  meetingNote: string | null;
+  createdAt: string;
+  respondedAt: string | null;
+  updatedAt: string;
+};
+
+export type MeetingArrangement = {
+  meetingPlace: string | null;
+  meetingTime: string | null;
+  meetingNote: string | null;
+};
+
 export type AuthResponse = {
   token: string;
   user: User;

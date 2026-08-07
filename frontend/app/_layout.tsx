@@ -28,6 +28,17 @@ export default function RootLayout() {
             headerShadowVisible: false,
           }}
         />
+        <Stack.Screen
+          name="connection/[connectionId]"
+          options={{
+            headerShown: true,
+            title: "Cooking connection",
+            headerBackTitle: "Matches",
+            headerTintColor: "#28764a",
+            headerStyle: { backgroundColor: "#f3f1e9" },
+            headerShadowVisible: false,
+          }}
+        />
       </Stack>
     </AuthProvider>
   );

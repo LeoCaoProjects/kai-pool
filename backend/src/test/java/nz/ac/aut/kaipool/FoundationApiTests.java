@@ -26,6 +26,7 @@ import org.springframework.web.context.WebApplicationContext;
 import com.jayway.jsonpath.JsonPath;
 
 import nz.ac.aut.kaipool.repository.FoodRepository;
+import nz.ac.aut.kaipool.repository.CookingConnectionRepository;
 import nz.ac.aut.kaipool.repository.CollaborativeRecipeCacheRepository;
 import nz.ac.aut.kaipool.repository.MealImageAssetRepository;
 import nz.ac.aut.kaipool.repository.UserRepository;
@@ -40,6 +41,9 @@ class FoundationApiTests {
 
     @Autowired
     private FoodRepository foodRepository;
+
+    @Autowired
+    private CookingConnectionRepository cookingConnectionRepository;
 
     @Autowired
     private CollaborativeRecipeCacheRepository collaborativeRecipeCacheRepository;
@@ -60,6 +64,7 @@ class FoundationApiTests {
         mockMvc = MockMvcBuilders.webAppContextSetup(context).apply(springSecurity()).build();
         collaborativeRecipeCacheRepository.deleteAll();
         mealImageAssetRepository.deleteAll();
+        cookingConnectionRepository.deleteAll();
         foodRepository.deleteAll();
         userRepository.deleteAll();
     }
@@ -427,6 +432,92 @@ class FoundationApiTests {
                 .andExpect(status().isCreated())
                 .andReturn();
         return ((Number) JsonPath.read(result.getResponse().getContentAsString(), "$.id")).longValue();
+    }
+
+    @Test
+    void usersCanRequestAcceptAndArrangeACookingConnection() throws Exception {
+        RegisteredUser requester = registerUser("Requesting Cook", "requesting-cook@kaipool.nz");
+        RegisteredUser recipient = registerUser("Receiving Cook", "receiving-cook@kaipool.nz");
+        RegisteredUser stranger = registerUser("Stranger", "connection-stranger@kaipool.nz");
+        completeProfile(requester, -36.990, 174.860, "Chinese");
+        completeProfile(recipient, -36.980, 174.870, "Italian");
+        completeProfile(stranger, -36.970, 174.880, "Māori");
+        addFood(requester, "Chicken", "1 kg", "COOK_TOGETHER");
+        addFood(recipient, "Rice", "2 cups", "COOK_TOGETHER");
+        addFood(stranger, "Eggs", "6", "COOK_TOGETHER");
+
+        MvcResult requested = mockMvc.perform(post("/api/cooking-connections/requests/{id}", recipient.id())
+                        .header("Authorization", "Bearer " + requester.token()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("PENDING"))
+                .andExpect(jsonPath("$.incoming").value(false))
+                .andExpect(jsonPath("$.contactEmail").doesNotExist())
+                .andReturn();
+        long connectionId = ((Number) JsonPath.read(
+                requested.getResponse().getContentAsString(), "$.id")).longValue();
+
+        mockMvc.perform(put("/api/cooking-connections/{id}/response", connectionId)
+                        .header("Authorization", "Bearer " + requester.token())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"ACCEPTED\"}"))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/api/cooking-connections")
+                        .header("Authorization", "Bearer " + recipient.token()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].incoming").value(true))
+                .andExpect(jsonPath("$[0].otherUserName").value("Requesting Cook"));
+
+        mockMvc.perform(put("/api/cooking-connections/{id}/response", connectionId)
+                        .header("Authorization", "Bearer " + recipient.token())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"ACCEPTED\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("ACCEPTED"))
+                .andExpect(jsonPath("$.contactEmail").value("requesting-cook@kaipool.nz"));
+
+        mockMvc.perform(put("/api/cooking-connections/{id}/arrangement", connectionId)
+                        .header("Authorization", "Bearer " + requester.token())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "meetingPlace":"Ōtara Community Kitchen",
+                                  "meetingTime":"Saturday at 11:00 am",
+                                  "meetingNote":"Bring a container for leftovers"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.meetingPlace").value("Ōtara Community Kitchen"))
+                .andExpect(jsonPath("$.meetingTime").value("Saturday at 11:00 am"));
+
+        mockMvc.perform(get("/api/cooking-connections/{id}", connectionId)
+                        .header("Authorization", "Bearer " + stranger.token()))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void cookingRequestCanBeDeclinedAndContactDetailsStayPrivate() throws Exception {
+        RegisteredUser requester = registerUser("Declined Requester", "declined-requester@kaipool.nz");
+        RegisteredUser recipient = registerUser("Declining Cook", "declining-cook@kaipool.nz");
+        completeProfile(requester, -36.990, 174.860, "Chinese");
+        completeProfile(recipient, -36.980, 174.870, "Italian");
+        addFood(requester, "Chicken", "1 kg", "COOK_TOGETHER");
+        addFood(recipient, "Rice", "2 cups", "COOK_TOGETHER");
+
+        MvcResult requested = mockMvc.perform(post("/api/cooking-connections/requests/{id}", recipient.id())
+                        .header("Authorization", "Bearer " + requester.token()))
+                .andExpect(status().isOk())
+                .andReturn();
+        long connectionId = ((Number) JsonPath.read(
+                requested.getResponse().getContentAsString(), "$.id")).longValue();
+
+        mockMvc.perform(put("/api/cooking-connections/{id}/response", connectionId)
+                        .header("Authorization", "Bearer " + recipient.token())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"DECLINED\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("DECLINED"))
+                .andExpect(jsonPath("$.contactEmail").doesNotExist());
     }
 
     private ResultActions register(String name, String email) throws Exception {

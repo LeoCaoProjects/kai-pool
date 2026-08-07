@@ -29,7 +29,11 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ErrorResponse(exception.getMessage()));
     }
 
-    @ExceptionHandler({EmailAlreadyRegisteredException.class, ListingUnavailableException.class})
+    @ExceptionHandler({
+            EmailAlreadyRegisteredException.class,
+            ListingUnavailableException.class,
+            ConnectionConflictException.class
+    })
     ResponseEntity<ErrorResponse> handleConflict(RuntimeException exception) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(new ErrorResponse(exception.getMessage()));
     }
