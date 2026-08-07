@@ -1,5 +1,8 @@
 package nz.ac.aut.kaipool.service;
 
+import java.util.LinkedHashSet;
+import java.util.Set;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,13 +43,39 @@ public class UserService {
     public UserResponse updateCurrentUser(String email, UpdateUserRequest request) {
         User user = getRequiredByEmail(email);
         user.setName(request.name().trim());
-        user.setBio(request.bio());
-        user.setProfileImageUrl(request.profileImageUrl());
-        user.setLatitude(request.latitude());
-        user.setLongitude(request.longitude());
-        user.setFoodCultures(request.foodCultures());
-        user.setFoodCulturesToExplore(request.foodCulturesToExplore());
+        user.setBio(cleanOptional(request.bio()));
+        user.setProfileImageUrl(cleanOptional(request.profileImageUrl()));
+        user.setLatitude(roundApproximateLocation(request.latitude()));
+        user.setLongitude(roundApproximateLocation(request.longitude()));
+        user.setFoodCultures(cleanCultures(request.foodCultures()));
+        user.setFoodCulturesToExplore(cleanCultures(request.foodCulturesToExplore()));
+        if (request.onboardingCompleted() != null) {
+            user.setOnboardingCompleted(request.onboardingCompleted());
+        }
         return toResponse(userRepository.save(user));
+    }
+
+    private String cleanOptional(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return value.trim();
+    }
+
+    private Set<String> cleanCultures(Set<String> cultures) {
+        if (cultures == null) {
+            return Set.of();
+        }
+        LinkedHashSet<String> cleaned = new LinkedHashSet<>();
+        cultures.stream()
+                .map(String::trim)
+                .filter(value -> !value.isEmpty())
+                .forEach(cleaned::add);
+        return cleaned;
+    }
+
+    private Double roundApproximateLocation(Double coordinate) {
+        return coordinate == null ? null : Math.round(coordinate * 100.0) / 100.0;
     }
 
     public UserResponse toResponse(User user) {
@@ -60,6 +89,7 @@ public class UserService {
                 user.getLongitude(),
                 user.getFoodCultures(),
                 user.getFoodCulturesToExplore(),
+                user.isOnboardingCompleted(),
                 user.getCreatedAt());
     }
 }

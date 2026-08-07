@@ -18,6 +18,10 @@ export default function TabLayout() {
     return <Redirect href="/login" />;
   }
 
+  if (!user.onboardingCompleted) {
+    return <Redirect href="/onboarding" />;
+  }
+
   return (
     <Tabs screenOptions={{ headerTitleAlign: "center" }}>
       <Tabs.Screen name="home" options={{ title: "Home" }} />

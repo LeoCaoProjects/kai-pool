@@ -19,7 +19,7 @@ export default function RegisterScreen() {
     setError("");
     try {
       await register({ name, email, password });
-      router.replace("/(tabs)/home");
+      router.replace("/onboarding");
     } catch (caught) {
       setError(caught instanceof ApiError ? caught.message : "Could not register");
     } finally {

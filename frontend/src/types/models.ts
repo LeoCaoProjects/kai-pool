@@ -8,6 +8,7 @@ export type User = {
   longitude: number | null;
   foodCultures: string[];
   foodCulturesToExplore: string[];
+  onboardingCompleted: boolean;
   createdAt: string;
 };
 

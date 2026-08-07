@@ -36,9 +36,13 @@ public class User {
     @Column(length = 1000)
     private String bio;
 
+    @Column(length = 2048)
     private String profileImageUrl;
     private Double latitude;
     private Double longitude;
+
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    private boolean onboardingCompleted;
 
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "user_food_cultures", joinColumns = @JoinColumn(name = "user_id"))
@@ -127,6 +131,14 @@ public class User {
 
     public void setLongitude(Double longitude) {
         this.longitude = longitude;
+    }
+
+    public boolean isOnboardingCompleted() {
+        return onboardingCompleted;
+    }
+
+    public void setOnboardingCompleted(boolean onboardingCompleted) {
+        this.onboardingCompleted = onboardingCompleted;
     }
 
     public Set<String> getFoodCultures() {

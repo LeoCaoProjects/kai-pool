@@ -62,6 +62,7 @@ public class DevelopmentDataConfig {
         user.setBio("Demo account for Kai Pool development.");
         user.setFoodCultures(foodCultures);
         user.setFoodCulturesToExplore(foodCulturesToExplore);
+        user.setOnboardingCompleted(true);
         return user;
     }
 }

@@ -14,5 +14,9 @@ export default function Index() {
     );
   }
 
-  return <Redirect href={user ? "/(tabs)/home" : "/login"} />;
+  if (!user) {
+    return <Redirect href="/login" />;
+  }
+
+  return <Redirect href={user.onboardingCompleted ? "/(tabs)/home" : "/onboarding"} />;
 }

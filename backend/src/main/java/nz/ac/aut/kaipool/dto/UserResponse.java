@@ -13,5 +13,6 @@ public record UserResponse(
         Double longitude,
         Set<String> foodCultures,
         Set<String> foodCulturesToExplore,
+        boolean onboardingCompleted,
         Instant createdAt) {
 }
