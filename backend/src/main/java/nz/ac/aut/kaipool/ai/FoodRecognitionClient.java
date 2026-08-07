@@ -5,10 +5,10 @@ import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
+import org.springframework.web.client.RestClientResponseException;
 
 import nz.ac.aut.kaipool.exception.FoodRecognitionException;
 
@@ -28,46 +28,61 @@ public class FoodRecognitionClient {
 
     public FoodRecognitionClient(
             @Value("${app.ai.api-key:}") String apiKey,
-            @Value("${app.ai.model:gpt-4o-mini}") String model) {
-        this.restClient = RestClient.create("https://api.openai.com/v1");
+            @Value("${app.ai.model:gemini-3.6-flash}") String model) {
+        this.restClient = RestClient.create("https://generativelanguage.googleapis.com/v1beta");
         this.apiKey = apiKey;
         this.model = model;
     }
 
     public String recognize(byte[] image, String contentType) {
         if (apiKey.isBlank()) {
-            throw new FoodRecognitionException("Food recognition is not configured. Set AI_API_KEY.");
+            throw new FoodRecognitionException("Food recognition is not configured. Set GEMINI_API_KEY.");
         }
 
-        String dataUrl = "data:%s;base64,%s".formatted(
-                contentType,
-                Base64.getEncoder().encodeToString(image));
+        String imageData = Base64.getEncoder().encodeToString(image);
 
         try {
             Map<?, ?> response = restClient.post()
-                    .uri("/responses")
-                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey)
-                    .body(requestBody(dataUrl))
+                    .uri("/interactions")
+                    .header("x-goog-api-key", apiKey)
+                    .body(requestBody(imageData, contentType))
                     .retrieve()
                     .body(Map.class);
             return readOutputText(response);
         } catch (FoodRecognitionException exception) {
             throw exception;
+        } catch (RestClientResponseException exception) {
+            if (exception.getStatusCode().value() == 429) {
+                throw new FoodRecognitionException(
+                        "The free food recognition limit was reached. Try again shortly.",
+                        exception);
+            }
+            if (exception.getStatusCode().value() == 401 || exception.getStatusCode().value() == 403) {
+                throw new FoodRecognitionException(
+                        "Food recognition is not configured correctly. Check GEMINI_API_KEY.",
+                        exception);
+            }
+            throw new FoodRecognitionException("The food recognition service is unavailable. Try again.", exception);
         } catch (RestClientException exception) {
             throw new FoodRecognitionException("The food recognition service is unavailable. Try again.", exception);
         }
     }
 
-    private Map<String, Object> requestBody(String dataUrl) {
+    private Map<String, Object> requestBody(String imageData, String contentType) {
+        Map<String, Object> nullableString = Map.of(
+                "anyOf", List.of(
+                        Map.of("type", "string"),
+                        Map.of("type", "null")));
+        Map<String, Object> nullableConfidence = Map.of(
+                "anyOf", List.of(
+                        Map.of("type", "number", "minimum", 0, "maximum", 1),
+                        Map.of("type", "null")));
         Map<String, Object> itemSchema = Map.of(
                 "type", "object",
                 "properties", Map.of(
                         "name", Map.of("type", "string"),
-                        "quantity", Map.of("type", List.of("string", "null")),
-                        "confidence", Map.of(
-                                "type", List.of("number", "null"),
-                                "minimum", 0,
-                                "maximum", 1)),
+                        "quantity", nullableString,
+                        "confidence", nullableConfidence),
                 "required", List.of("name", "quantity", "confidence"),
                 "additionalProperties", false);
         Map<String, Object> schema = Map.of(
@@ -81,39 +96,44 @@ public class FoodRecognitionClient {
 
         return Map.of(
                 "model", model,
-                "input", List.of(Map.of(
-                        "role", "user",
-                        "content", List.of(
-                                Map.of("type", "input_text", "text", PROMPT),
-                                Map.of("type", "input_image", "image_url", dataUrl, "detail", "low")))),
-                "text", Map.of("format", Map.of(
-                        "type", "json_schema",
-                        "name", "food_recognition",
-                        "strict", true,
-                        "schema", schema)),
-                "max_output_tokens", 500);
+                "store", false,
+                "input", List.of(
+                        Map.of("type", "text", "text", PROMPT),
+                        Map.of(
+                                "type", "image",
+                                "data", imageData,
+                                "mime_type", contentType)),
+                "response_format", Map.of(
+                        "type", "text",
+                        "mime_type", "application/json",
+                        "schema", schema));
     }
 
     private String readOutputText(Map<?, ?> response) {
-        if (response == null || !(response.get("output") instanceof List<?> output)) {
+        if (response == null || !(response.get("steps") instanceof List<?> steps)) {
             throw new FoodRecognitionException("The food recognition service returned an invalid response.");
         }
 
-        for (Object outputItem : output) {
-            if (!(outputItem instanceof Map<?, ?> item)
-                    || !(item.get("content") instanceof List<?> content)) {
+        String outputText = null;
+        for (Object stepItem : steps) {
+            if (!(stepItem instanceof Map<?, ?> step)
+                    || !"model_output".equals(step.get("type"))
+                    || !(step.get("content") instanceof List<?> content)) {
                 continue;
             }
             for (Object contentItem : content) {
                 if (contentItem instanceof Map<?, ?> part
-                        && "output_text".equals(part.get("type"))
+                        && "text".equals(part.get("type"))
                         && part.get("text") instanceof String text
                         && !text.isBlank()) {
-                    return text;
+                    outputText = text;
                 }
             }
         }
 
+        if (outputText != null) {
+            return outputText;
+        }
         throw new FoodRecognitionException("The food recognition service did not return any results.");
     }
 }

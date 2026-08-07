@@ -7,9 +7,8 @@ Created for the AUT South Campus AI Hackathon 2026.
 Kai Pool is our team project for the hackathon's food-waste challenge.
 We will choose the final product direction during the event.
 
-This repository contains the shared user, authentication, food-pool, API,
-and navigation foundation. AI recognition, matching, and marketplace features
-are not implemented yet.
+This repository contains the shared app foundation and AI food recognition.
+Matching and marketplace features are not implemented yet.
 
 ## Built with
 
@@ -20,13 +19,14 @@ are not implemented yet.
 - Spring Boot
 - Gradle
 - PostgreSQL
+- Gemini
 
 ## Running locally
 
 Node.js, npm, Java 21, and Git are required.
 
 Create `backend/.env` from `backend/.env.example` once, then add the Supabase
-Session pooler details and OpenAI API key. After that, run this from the project
+Session pooler details and Gemini API key. After that, run this from the project
 folder on Windows:
 
 ```powershell

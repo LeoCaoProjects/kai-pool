@@ -68,7 +68,7 @@ try {
     }
 
     Import-DotEnv $backendEnvironment
-    foreach ($requiredVariable in @("DB_URL", "DB_USERNAME", "DB_PASSWORD", "JWT_SECRET", "AI_API_KEY")) {
+    foreach ($requiredVariable in @("DB_URL", "DB_USERNAME", "DB_PASSWORD", "JWT_SECRET", "GEMINI_API_KEY")) {
         $value = [System.Environment]::GetEnvironmentVariable($requiredVariable, "Process")
         if ([string]::IsNullOrWhiteSpace($value) -or $value -match 'YOUR_|PROJECT_REFERENCE|replace-with') {
             throw "$requiredVariable is missing from backend\.env."
