@@ -30,6 +30,52 @@ export type FoodItem = {
   createdAt: string;
 };
 
+export type FoodContribution = {
+  foodId: number;
+  name: string;
+  quantity: string | null;
+  imageUrl: string | null;
+};
+
+export type MealPreview = {
+  mealName: string;
+  description: string;
+  culturalOrigin: string;
+  ingredientsFromYou: string[];
+  ingredientsFromThem: string[];
+  optionalMissingIngredients: string[];
+  imageUrl: string | null;
+  imageSource: string | null;
+  imageAttribution: string | null;
+};
+
+export type CookingMatch = {
+  matchedUserId: number;
+  matchedUserName: string;
+  matchedUserBio: string | null;
+  matchedUserProfileImageUrl: string | null;
+  matchedUserFoodCultures: string[];
+  distanceKm: number;
+  matchScore: number;
+  matchReason: string;
+  yourContributions: FoodContribution[];
+  theirContributions: FoodContribution[];
+  possibleMeals: MealPreview[];
+};
+
+export type CollaborativeMeal = {
+  mealName: string;
+  description: string;
+  culturalOriginOrInspiration: string;
+  ingredientsFromYou: string[];
+  ingredientsFromThem: string[];
+  optionalMissingIngredients: string[];
+  cookingInstructions: string[];
+  imageUrl: string | null;
+  imageSource: string | null;
+  imageAttribution: string | null;
+};
+
 export type AuthResponse = {
   token: string;
   user: User;

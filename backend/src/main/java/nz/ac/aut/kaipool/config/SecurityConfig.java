@@ -28,7 +28,12 @@ public class SecurityConfig {
                 .cors(Customizer.withDefaults())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/health", "/api/auth/register", "/api/auth/login", "/actuator/health")
+                        .requestMatchers(
+                                "/api/health",
+                                "/api/auth/register",
+                                "/api/auth/login",
+                                "/api/meal-images/**",
+                                "/actuator/health")
                         .permitAll()
                         .anyRequest().authenticated())
                 .exceptionHandling(errors -> errors.authenticationEntryPoint((request, response, exception) -> {
