@@ -53,7 +53,8 @@ export default function ScanScreen() {
 
       const result = await ImagePicker.launchCameraAsync({
         mediaTypes: ["images"],
-        quality: 0.8,
+        base64: true,
+        quality: 0.65,
       });
       if (!result.canceled) {
         usePickedImage(result.assets[0]);
@@ -73,7 +74,8 @@ export default function ScanScreen() {
 
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ["images"],
-        quality: 0.8,
+        base64: true,
+        quality: 0.65,
       });
       if (!result.canceled) {
         usePickedImage(result.assets[0]);
@@ -130,6 +132,10 @@ export default function ScanScreen() {
   };
 
   const saveItems = async () => {
+    if (!image) {
+      setError("Choose a photo before saving food.");
+      return;
+    }
     if (items.length === 0) {
       setError("Add at least one food item before saving.");
       return;
@@ -142,10 +148,13 @@ export default function ScanScreen() {
     setSaving(true);
     setError("");
     try {
+      const imageUrl = image.base64
+        ? `data:image/jpeg;base64,${image.base64}`
+        : null;
       await Promise.all(items.map((item) => createFood({
         name: item.name.trim(),
         quantity: item.quantity.trim() || null,
-        imageUrl: null,
+        imageUrl,
         availability: "PRIVATE",
       })));
       setSaved(true);

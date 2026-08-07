@@ -27,11 +27,27 @@ const availabilityLabel = {
   GIVEAWAY: "Giveaway",
 } as const;
 
-function FoodPin({ item }: { item: MarketplaceFoodItem }) {
+const MINIMAL_MAP_STYLE = [
+  { elementType: "geometry", stylers: [{ color: "#F7F5F0" }] },
+  { elementType: "labels.text.fill", stylers: [{ color: "#8A867D" }] },
+  { elementType: "labels.text.stroke", stylers: [{ color: "#F7F5F0" }] },
+  { featureType: "poi", stylers: [{ visibility: "off" }] },
+  { featureType: "transit", stylers: [{ visibility: "off" }] },
+  { featureType: "road", elementType: "geometry", stylers: [{ color: "#FFFFFF" }] },
+  { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#EEEAE1" }] },
+  { featureType: "water", elementType: "geometry", stylers: [{ color: "#E7E3DB" }] },
+];
+
+function FoodPin({ item, onImageLoad }: { item: MarketplaceFoodItem; onImageLoad: () => void }) {
   return (
-    <View style={styles.pin}>
+    <View collapsable={false} style={styles.pin}>
       {item.imageUrl ? (
-        <Image source={{ uri: item.imageUrl }} style={styles.pinImage} />
+        <Image
+          onLoad={onImageLoad}
+          resizeMode="cover"
+          source={{ uri: item.imageUrl }}
+          style={styles.pinImage}
+        />
       ) : (
         <Text style={styles.pinEmoji}>🍲</Text>
       )}
@@ -46,6 +62,14 @@ export default function MarketplaceScreen() {
   const [selected, setSelected] = useState<MarketplaceFoodItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [loadedPinImages, setLoadedPinImages] = useState<Set<number>>(() => new Set());
+
+  const markPinImageLoaded = useCallback((id: number) => {
+    setLoadedPinImages((current) => {
+      if (current.has(id)) return current;
+      return new Set(current).add(id);
+    });
+  }, []);
 
   const loadListings = useCallback(async () => {
     setLoading(true);
@@ -83,24 +107,35 @@ export default function MarketplaceScreen() {
         ref={mapRef}
         onPress={() => setSelected(null)}
         style={StyleSheet.absoluteFill}
+        customMapStyle={MINIMAL_MAP_STYLE}
+        mapType="standard"
+        pitchEnabled={false}
+        rotateEnabled={false}
+        showsBuildings={false}
         showsCompass={false}
+        showsIndoorLevelPicker={false}
+        showsPointsOfInterest={false}
+        showsScale={false}
+        showsTraffic={false}
         showsUserLocation
+        toolbarEnabled={false}
       >
         {items.map((item) => (
           <Marker
             key={item.id}
             coordinate={{ latitude: item.latitude, longitude: item.longitude }}
             onPress={() => setSelected(item)}
+            tracksViewChanges={Boolean(item.imageUrl) && !loadedPinImages.has(item.id)}
           >
-            <FoodPin item={item} />
+            <FoodPin item={item} onImageLoad={() => markPinImageLoaded(item.id)} />
           </Marker>
         ))}
       </MapView>
 
       <View style={styles.header}>
-        <Text style={styles.eyebrow}>KAI POOL MAP</Text>
-        <Text style={styles.title}>Food near you</Text>
-        <Text style={styles.subtitle}>Move the map to explore community listings.</Text>
+        <View style={styles.headerDot} />
+        <Text style={styles.title}>Nearby food</Text>
+        <Text style={styles.count}>{items.length}</Text>
       </View>
 
       {loading ? <View style={styles.status}><ActivityIndicator color="#66734D" /></View> : null}
@@ -114,7 +149,7 @@ export default function MarketplaceScreen() {
           <Pressable accessibilityLabel="Close listing details" onPress={() => setSelected(null)} style={styles.close}>
             <Text style={styles.closeText}>×</Text>
           </Pressable>
-          {selected.imageUrl ? <Image source={{ uri: selected.imageUrl }} style={styles.cardImage} /> : <View style={styles.cardFallback}><Text style={styles.cardEmoji}>🍲</Text></View>}
+          {selected.imageUrl ? <Image resizeMode="cover" source={{ uri: selected.imageUrl }} style={styles.cardImage} /> : <View style={styles.cardFallback}><Text style={styles.cardEmoji}>🍲</Text></View>}
           <View style={styles.cardContent}>
             <Text style={styles.availability}>{availabilityLabel[selected.availability]}</Text>
             <Text style={styles.foodName}>{selected.name}</Text>
@@ -128,14 +163,14 @@ export default function MarketplaceScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: "#F5F0E4" },
-  header: { position: "absolute", top: 16, left: 16, right: 16, backgroundColor: "rgba(255, 252, 245, 0.94)", borderRadius: 20, padding: 16, shadowColor: "#4B4037", shadowOpacity: 0.13, shadowRadius: 12, elevation: 4 },
-  eyebrow: { color: "#68734E", fontSize: 11, fontWeight: "800", letterSpacing: 1.2 },
-  title: { color: "#3F4431", fontSize: 26, fontWeight: "800", marginTop: 2 },
-  subtitle: { color: "#706961", fontSize: 13, marginTop: 3 },
+  header: { position: "absolute", top: 16, left: 16, alignItems: "center", alignSelf: "flex-start", backgroundColor: "rgba(255, 253, 249, 0.96)", borderRadius: 24, flexDirection: "row", gap: 8, paddingHorizontal: 14, paddingVertical: 11, shadowColor: "#4B4037", shadowOpacity: 0.1, shadowRadius: 10, elevation: 3 },
+  headerDot: { backgroundColor: "#748153", borderRadius: 5, height: 10, width: 10 },
+  title: { color: "#3F4431", fontSize: 16, fontWeight: "800" },
+  count: { backgroundColor: "#E8E1F1", borderRadius: 12, color: "#5A5366", fontSize: 12, fontWeight: "800", overflow: "hidden", paddingHorizontal: 7, paddingVertical: 2 },
   pin: { width: 54, height: 54, borderRadius: 27, overflow: "hidden", backgroundColor: "#D8D0EA", borderWidth: 3, borderColor: "#FFFCF5", alignItems: "center", justifyContent: "center", shadowColor: "#37322D", shadowOpacity: 0.25, shadowRadius: 5, elevation: 5 },
   pinImage: { width: "100%", height: "100%" },
   pinEmoji: { fontSize: 27 },
-  status: { position: "absolute", top: 145, alignSelf: "center", backgroundColor: "#FFFCF5", borderRadius: 18, paddingHorizontal: 16, paddingVertical: 11, maxWidth: "88%" },
+  status: { position: "absolute", top: 75, alignSelf: "center", backgroundColor: "#FFFCF5", borderRadius: 18, paddingHorizontal: 16, paddingVertical: 11, maxWidth: "88%" },
   emptyText: { color: "#5F654B", textAlign: "center" },
   card: { position: "absolute", left: 16, right: 16, bottom: 24, minHeight: 128, flexDirection: "row", overflow: "hidden", borderRadius: 22, backgroundColor: "#FFFCF5", shadowColor: "#39342F", shadowOpacity: 0.2, shadowRadius: 14, elevation: 8 },
   cardImage: { width: 124, minHeight: 128 },

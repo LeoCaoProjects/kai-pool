@@ -30,6 +30,7 @@ public class Food {
     @Column(nullable = false)
     private String name;
 
+    @Column(columnDefinition = "TEXT")
     private String imageUrl;
 
     private String quantity;
