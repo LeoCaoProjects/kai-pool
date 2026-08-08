@@ -14,17 +14,34 @@ export default function ProfileScreen() {
     router.replace("/login");
   };
 
-  const confirmSignOut = () => Alert.alert("Log out?", "You can log back in at any time.", [
-    { text: "Cancel", style: "cancel" },
-    { text: "Log out", style: "destructive", onPress: () => void signOut() },
-  ]);
+  const confirmSignOut = () =>
+    Alert.alert("Log out?", "You can log back in at any time.", [
+      { text: "Cancel", style: "cancel" },
+      { text: "Log out", style: "destructive", onPress: () => void signOut() },
+    ]);
 
   return (
-    <ScrollView style={sharedStyles.screen} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={sharedStyles.screen}
+      contentContainerStyle={styles.content}
+    >
       <ProfileForm title="Profile" submitLabel="Save profile" />
-      <Pressable onPress={confirmSignOut} style={styles.logout}><Text style={styles.logoutText}>Log out</Text></Pressable>
+      <Pressable onPress={confirmSignOut} style={styles.logout}>
+        <Text style={styles.logoutText}>Log out</Text>
+      </Pressable>
     </ScrollView>
   );
 }
 
-const styles = StyleSheet.create({ content: { gap: 24, padding: 20, paddingBottom: 48 }, logout: { alignItems: "center", borderColor: colors.error, borderRadius: 12, borderWidth: 1, justifyContent: "center", minHeight: 52 }, logoutText: { color: colors.error, fontSize: 15, fontWeight: "600" } });
+const styles = StyleSheet.create({
+  content: { gap: 24, padding: 20, paddingBottom: 48 },
+  logout: {
+    alignItems: "center",
+    borderColor: colors.error,
+    borderRadius: 12,
+    borderWidth: 1,
+    justifyContent: "center",
+    minHeight: 52,
+  },
+  logoutText: { color: colors.error, fontSize: 15, fontWeight: "600" },
+});

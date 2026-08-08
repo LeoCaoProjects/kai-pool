@@ -13,14 +13,11 @@ export const scanFood = async (image: ScanImage) => {
   if (image.file) {
     formData.append("image", image.file, image.fileName || image.file.name);
   } else {
-    formData.append(
-      "image",
-      {
-        uri: image.uri,
-        name: image.fileName || "food.jpg",
-        type: image.mimeType || "image/jpeg",
-      } as unknown as Blob,
-    );
+    formData.append("image", {
+      uri: image.uri,
+      name: image.fileName || "food.jpg",
+      type: image.mimeType || "image/jpeg",
+    } as unknown as Blob);
   }
 
   const controller = new AbortController();
@@ -33,7 +30,10 @@ export const scanFood = async (image: ScanImage) => {
     });
   } catch (caught) {
     if (caught instanceof Error && caught.name === "AbortError") {
-      throw new ApiError("Food recognition took too long. Please try again.", 408);
+      throw new ApiError(
+        "Food recognition took too long. Please try again.",
+        408,
+      );
     }
     throw caught;
   } finally {

@@ -1,15 +1,29 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  type ReactNode,
+} from "react";
 
 import {
   getAuthenticatedUser,
   login as loginRequest,
   register as registerRequest,
 } from "../../api/auth";
-import { ACCESS_TOKEN_KEY, setApiToken, setUnauthorizedHandler } from "../../api/client";
+import {
+  ACCESS_TOKEN_KEY,
+  setApiToken,
+  setUnauthorizedHandler,
+} from "../../api/client";
 import { updateCurrentUser as updateCurrentUserRequest } from "../../api/users";
 import type { User } from "../../types/models";
-import type { LoginRequest, RegisterRequest, UpdateUserRequest } from "../../types/requests";
+import type {
+  LoginRequest,
+  RegisterRequest,
+  UpdateUserRequest,
+} from "../../types/requests";
 
 type AuthContextValue = {
   user: User | null;
@@ -80,7 +94,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, updateUser, logout }}>
+    <AuthContext.Provider
+      value={{ user, loading, login, register, updateUser, logout }}
+    >
       {children}
     </AuthContext.Provider>
   );

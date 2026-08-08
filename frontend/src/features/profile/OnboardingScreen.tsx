@@ -21,15 +21,22 @@ export default function OnboardingScreen() {
   }
 
   return (
-    <SafeAreaView edges={["top", "bottom"]} style={sharedStyles.screen}><ScrollView style={sharedStyles.screen} contentContainerStyle={styles.content}>
-      <ProfileForm
-        title="Set up your profile"
-        submitLabel="Finish setup"
-        completeOnboarding
-        onSaved={() => router.replace("/(tabs)/food-pool")}
-      />
-    </ScrollView></SafeAreaView>
+    <SafeAreaView edges={["top", "bottom"]} style={sharedStyles.screen}>
+      <ScrollView
+        style={sharedStyles.screen}
+        contentContainerStyle={styles.content}
+      >
+        <ProfileForm
+          title="Set up your profile"
+          submitLabel="Finish setup"
+          completeOnboarding
+          onSaved={() => router.replace("/(tabs)/food-pool")}
+        />
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({ content: { padding: 24, paddingBottom: 48 } });
+const styles = StyleSheet.create({
+  content: { padding: 24, paddingBottom: 48 },
+});

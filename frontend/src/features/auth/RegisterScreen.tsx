@@ -1,5 +1,15 @@
 import { useState } from "react";
-import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
+import {
+  ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import { useRouter } from "expo-router";
 import { ApiError } from "../../api/client";
 import BrandHeader from "../../ui/BrandHeader";
@@ -7,9 +17,119 @@ import { colors, sharedStyles } from "../../ui/theme";
 import { useAuth } from "./AuthContext";
 
 export default function RegisterScreen() {
-  const router = useRouter(); const { register } = useAuth();
-  const [name, setName] = useState(""); const [email, setEmail] = useState(""); const [password, setPassword] = useState(""); const [error, setError] = useState(""); const [submitting, setSubmitting] = useState(false);
-  const submit = async () => { if (!name.trim() || !email.trim() || password.length < 8) { setError("Enter your name, email, and a password with at least 8 characters."); return; } setSubmitting(true); setError(""); try { await register({ name: name.trim(), email: email.trim(), password }); router.replace("/onboarding"); } catch (caught) { setError(caught instanceof ApiError ? caught.message : "Could not create your account."); } finally { setSubmitting(false); } };
-  return <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : undefined} style={sharedStyles.screen}><BrandHeader /><ScrollView contentContainerStyle={styles.page} keyboardShouldPersistTaps="handled"><View style={[sharedStyles.card, styles.card]}><View style={styles.heading}><Text style={sharedStyles.headline}>Join the Community</Text><Text style={[sharedStyles.body, styles.center]}>Create an account to start sharing food.</Text></View>{[["Full name", name, setName, "e.g. Aroha Ngata"], ["Email address", email, setEmail, "hello@example.com"]].map(([label, value, setter, placeholder]) => <View key={label as string} style={styles.field}><Text style={styles.label}>{label as string}</Text><TextInput autoCapitalize={label === "Email address" ? "none" : "words"} keyboardType={label === "Email address" ? "email-address" : "default"} onChangeText={setter as (v: string) => void} placeholder={placeholder as string} placeholderTextColor="#747A75" value={value as string} style={sharedStyles.input} /></View>)}<View style={styles.field}><Text style={styles.label}>Password</Text><TextInput onChangeText={setPassword} placeholder="At least 8 characters" placeholderTextColor="#747A75" secureTextEntry value={password} style={sharedStyles.input} /></View>{error ? <View style={sharedStyles.errorBox}><Text style={sharedStyles.errorText}>{error}</Text></View> : null}<Pressable disabled={submitting} onPress={() => void submit()} style={sharedStyles.primaryButton}>{submitting ? <ActivityIndicator color="white" /> : <Text style={sharedStyles.primaryButtonText}>Create account  →</Text>}</Pressable><Pressable onPress={() => router.back()}><Text style={styles.link}>Already have an account? Log in</Text></Pressable></View></ScrollView></KeyboardAvoidingView>;
+  const router = useRouter();
+  const { register } = useAuth();
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const submit = async () => {
+    if (!name.trim() || !email.trim() || password.length < 8) {
+      setError(
+        "Enter your name, email, and a password with at least 8 characters.",
+      );
+      return;
+    }
+    setSubmitting(true);
+    setError("");
+    try {
+      await register({ name: name.trim(), email: email.trim(), password });
+      router.replace("/onboarding");
+    } catch (caught) {
+      setError(
+        caught instanceof ApiError
+          ? caught.message
+          : "Could not create your account.",
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
+  return (
+    <KeyboardAvoidingView
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+      style={sharedStyles.screen}
+    >
+      <BrandHeader />
+      <ScrollView
+        contentContainerStyle={styles.page}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={[sharedStyles.card, styles.card]}>
+          <View style={styles.heading}>
+            <Text style={sharedStyles.headline}>Join the Community</Text>
+            <Text style={[sharedStyles.body, styles.center]}>
+              Create an account to start sharing food.
+            </Text>
+          </View>
+          {[
+            ["Full name", name, setName, "e.g. Aroha Ngata"],
+            ["Email address", email, setEmail, "hello@example.com"],
+          ].map(([label, value, setter, placeholder]) => (
+            <View key={label as string} style={styles.field}>
+              <Text style={styles.label}>{label as string}</Text>
+              <TextInput
+                autoCapitalize={label === "Email address" ? "none" : "words"}
+                keyboardType={
+                  label === "Email address" ? "email-address" : "default"
+                }
+                onChangeText={setter as (v: string) => void}
+                placeholder={placeholder as string}
+                placeholderTextColor="#747A75"
+                value={value as string}
+                style={sharedStyles.input}
+              />
+            </View>
+          ))}
+          <View style={styles.field}>
+            <Text style={styles.label}>Password</Text>
+            <TextInput
+              onChangeText={setPassword}
+              placeholder="At least 8 characters"
+              placeholderTextColor="#747A75"
+              secureTextEntry
+              value={password}
+              style={sharedStyles.input}
+            />
+          </View>
+          {error ? (
+            <View style={sharedStyles.errorBox}>
+              <Text style={sharedStyles.errorText}>{error}</Text>
+            </View>
+          ) : null}
+          <Pressable
+            disabled={submitting}
+            onPress={() => void submit()}
+            style={sharedStyles.primaryButton}
+          >
+            {submitting ? (
+              <ActivityIndicator color="white" />
+            ) : (
+              <Text style={sharedStyles.primaryButtonText}>
+                Create account →
+              </Text>
+            )}
+          </Pressable>
+          <Pressable onPress={() => router.back()}>
+            <Text style={styles.link}>Already have an account? Log in</Text>
+          </Pressable>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
+  );
 }
-const styles = StyleSheet.create({ page: { flexGrow: 1, justifyContent: "center", padding: 24 }, card: { gap: 20, padding: 24 }, heading: { alignItems: "center", gap: 8 }, center: { textAlign: "center" }, field: { gap: 8 }, label: { color: colors.text, fontSize: 14, fontWeight: "500" }, link: { color: colors.primary, fontSize: 15, fontWeight: "600", textAlign: "center" } });
+const styles = StyleSheet.create({
+  page: { flexGrow: 1, justifyContent: "center", padding: 24 },
+  card: { gap: 20, padding: 24 },
+  heading: { alignItems: "center", gap: 8 },
+  center: { textAlign: "center" },
+  field: { gap: 8 },
+  label: { color: colors.text, fontSize: 14, fontWeight: "500" },
+  link: {
+    color: colors.primary,
+    fontSize: 15,
+    fontWeight: "600",
+    textAlign: "center",
+  },
+});

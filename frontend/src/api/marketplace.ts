@@ -12,4 +12,6 @@ export const getClaimedMarketplaceFoods = () =>
   apiRequest<MarketplaceFoodItem[]>("/api/foods/marketplace/claimed");
 
 export const claimMarketplaceFood = (id: number) =>
-  apiRequest<MarketplaceFoodItem>(`/api/foods/marketplace/${id}/claim`, { method: "POST" });
+  apiRequest<MarketplaceFoodItem>(`/api/foods/marketplace/${id}/claim`, {
+    method: "POST",
+  });

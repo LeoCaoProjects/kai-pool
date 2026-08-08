@@ -33,7 +33,8 @@ export const apiRequest = async <T>(
   }
   const headers = new Headers(options.headers);
   headers.set("Accept", "application/json");
-  const isFormData = typeof FormData !== "undefined" && options.body instanceof FormData;
+  const isFormData =
+    typeof FormData !== "undefined" && options.body instanceof FormData;
   if (options.body && !isFormData && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
   }
@@ -55,7 +56,9 @@ export const apiRequest = async <T>(
   }
 
   if (!response.ok) {
-    const error = (await response.json().catch(() => null)) as ApiErrorResponse | null;
+    const error = (await response
+      .json()
+      .catch(() => null)) as ApiErrorResponse | null;
     throw new ApiError(
       error?.message || `API request failed with status ${response.status}`,
       response.status,

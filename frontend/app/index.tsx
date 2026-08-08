@@ -10,13 +10,29 @@ export default function Index() {
 
   if (loading) {
     return (
-      <View style={{ alignItems: "center", backgroundColor: colors.background, flex: 1, justifyContent: "center", padding: 16 }}>
-        <Text style={{ color: colors.primary, fontSize: 16, fontWeight: "600" }}>Loading Kai Pool…</Text>
+      <View
+        style={{
+          alignItems: "center",
+          backgroundColor: colors.background,
+          flex: 1,
+          justifyContent: "center",
+          padding: 16,
+        }}
+      >
+        <Text
+          style={{ color: colors.primary, fontSize: 16, fontWeight: "600" }}
+        >
+          Loading Kai Pool…
+        </Text>
       </View>
     );
   }
 
   if (!user) return <WelcomeScreen />;
 
-  return <Redirect href={user.onboardingCompleted ? "/(tabs)/food-pool" : "/onboarding"} />;
+  return (
+    <Redirect
+      href={user.onboardingCompleted ? "/(tabs)/food-pool" : "/onboarding"}
+    />
+  );
 }

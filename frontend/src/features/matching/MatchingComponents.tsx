@@ -1,11 +1,5 @@
 import { useEffect, useState } from "react";
-import {
-  Image,
-  ImageBackground,
-  StyleSheet,
-  Text,
-  View,
-} from "react-native";
+import { Image, ImageBackground, StyleSheet, Text, View } from "react-native";
 
 import { buildApiUrl } from "../../config/api";
 import type { FoodContribution } from "../../types/models";
@@ -48,14 +42,22 @@ export function MealHero({
       <View style={styles.heroShade} />
       {rank !== undefined || score !== undefined || distanceKm !== undefined ? (
         <View style={styles.badgeRow}>
-          {rank !== undefined ? <Text style={styles.rankBadge}>#{rank} nearby match</Text> : null}
+          {rank !== undefined ? (
+            <Text style={styles.rankBadge}>#{rank} nearby match</Text>
+          ) : null}
           <View style={styles.badgeSpacer} />
-          {score !== undefined ? <Text style={styles.scoreBadge}>{score}% match</Text> : null}
-          {distanceKm !== undefined ? <Text style={styles.distanceBadge}>{distanceKm.toFixed(1)} km</Text> : null}
+          {score !== undefined ? (
+            <Text style={styles.scoreBadge}>{score}% match</Text>
+          ) : null}
+          {distanceKm !== undefined ? (
+            <Text style={styles.distanceBadge}>{distanceKm.toFixed(1)} km</Text>
+          ) : null}
         </View>
       ) : null}
       <View style={styles.heroCopy}>
-        <Text style={[styles.heroTitle, compact && styles.compactHeroTitle]}>{meal.mealName}</Text>
+        <Text style={[styles.heroTitle, compact && styles.compactHeroTitle]}>
+          {meal.mealName}
+        </Text>
         <Text style={styles.heroCulture}>{meal.culturalOrigin}</Text>
       </View>
     </>
@@ -74,9 +76,19 @@ export function MealHero({
           {content}
         </ImageBackground>
       ) : (
-        <View style={[styles.hero, styles.heroFallback, compact && styles.compactHero]}>{content}</View>
+        <View
+          style={[
+            styles.hero,
+            styles.heroFallback,
+            compact && styles.compactHero,
+          ]}
+        >
+          {content}
+        </View>
       )}
-      {meal.imageAttribution ? <Text style={styles.attribution}>{meal.imageAttribution}</Text> : null}
+      {meal.imageAttribution ? (
+        <Text style={styles.attribution}>{meal.imageAttribution}</Text>
+      ) : null}
     </View>
   );
 }
@@ -98,13 +110,19 @@ export function PersonSummary({
         <Image source={{ uri: profileImageUrl }} style={styles.avatar} />
       ) : (
         <View style={styles.avatarFallback}>
-          <Text style={styles.avatarInitial}>{name.charAt(0).toUpperCase()}</Text>
+          <Text style={styles.avatarInitial}>
+            {name.charAt(0).toUpperCase()}
+          </Text>
         </View>
       )}
       <View style={styles.personCopy}>
         <Text style={styles.personEyebrow}>Cook with</Text>
         <Text style={styles.personName}>{name}</Text>
-        {bio ? <Text style={styles.bio} numberOfLines={2}>{bio}</Text> : null}
+        {bio ? (
+          <Text style={styles.bio} numberOfLines={2}>
+            {bio}
+          </Text>
+        ) : null}
         {cultures.length > 0 ? (
           <Text style={styles.cultures}>Enjoys {cultures.join(" · ")}</Text>
         ) : null}
@@ -123,17 +141,31 @@ export function ContributionPanel({
   tone: "you" | "them";
 }) {
   return (
-    <View style={[styles.contributionPanel, tone === "you" ? styles.yourPanel : styles.theirPanel]}>
+    <View
+      style={[
+        styles.contributionPanel,
+        tone === "you" ? styles.yourPanel : styles.theirPanel,
+      ]}
+    >
       <Text style={styles.contributionTitle}>{title}</Text>
       {foods.map((food) => (
         <View key={food.foodId} style={styles.ingredientRow}>
           {food.imageUrl ? (
-            <Image source={{ uri: food.imageUrl }} style={styles.ingredientImage} />
+            <Image
+              source={{ uri: food.imageUrl }}
+              style={styles.ingredientImage}
+            />
           ) : (
-            <View style={[styles.ingredientDot, tone === "you" ? styles.yourDot : styles.theirDot]} />
+            <View
+              style={[
+                styles.ingredientDot,
+                tone === "you" ? styles.yourDot : styles.theirDot,
+              ]}
+            />
           )}
           <Text style={styles.ingredientText} numberOfLines={2}>
-            {food.name}{food.quantity ? ` · ${food.quantity}` : ""}
+            {food.name}
+            {food.quantity ? ` · ${food.quantity}` : ""}
           </Text>
         </View>
       ))}
@@ -189,10 +221,20 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
   heroCopy: { gap: 4 },
-  heroTitle: { color: "white", fontSize: 27, lineHeight: 31, fontWeight: "900" },
+  heroTitle: {
+    color: "white",
+    fontSize: 27,
+    lineHeight: 31,
+    fontWeight: "900",
+  },
   compactHeroTitle: { fontSize: 23, lineHeight: 27 },
   heroCulture: { color: "#f2ead6", fontSize: 14, fontWeight: "600" },
-  attribution: { paddingHorizontal: 12, paddingVertical: 5, color: "#718096", fontSize: 10 },
+  attribution: {
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    color: "#718096",
+    fontSize: 10,
+  },
   personRow: { flexDirection: "row", gap: 12, alignItems: "center" },
   avatar: { width: 58, height: 58, borderRadius: 29 },
   avatarFallback: {
@@ -203,13 +245,43 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     backgroundColor: "#d8f5df",
   },
-  avatarInitial: { color: "#173124", fontFamily: "Inter_600SemiBold", fontSize: 22 },
+  avatarInitial: {
+    color: "#173124",
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 22,
+  },
   personCopy: { flex: 1, gap: 1 },
-  personEyebrow: { color: "#4E635A", fontFamily: "Inter_600SemiBold", fontSize: 10, letterSpacing: 0.7, textTransform: "uppercase" },
-  personName: { color: "#173124", fontFamily: "Inter_600SemiBold", fontSize: 19 },
-  bio: { color: "#424844", fontFamily: "Inter_400Regular", fontSize: 13, lineHeight: 18 },
-  cultures: { marginTop: 2, color: "#4E635A", fontFamily: "Inter_500Medium", fontSize: 12 },
-  contributionPanel: { flex: 1, minWidth: 0, gap: 8, padding: 12, borderRadius: 14 },
+  personEyebrow: {
+    color: "#4E635A",
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 10,
+    letterSpacing: 0.7,
+    textTransform: "uppercase",
+  },
+  personName: {
+    color: "#173124",
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 19,
+  },
+  bio: {
+    color: "#424844",
+    fontFamily: "Inter_400Regular",
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  cultures: {
+    marginTop: 2,
+    color: "#4E635A",
+    fontFamily: "Inter_500Medium",
+    fontSize: 12,
+  },
+  contributionPanel: {
+    flex: 1,
+    minWidth: 0,
+    gap: 8,
+    padding: 12,
+    borderRadius: 14,
+  },
   yourPanel: { backgroundColor: "#eef8f0" },
   theirPanel: { backgroundColor: "#fff4e5" },
   contributionTitle: { color: "#24332b", fontSize: 13, fontWeight: "900" },

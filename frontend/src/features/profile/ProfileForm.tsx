@@ -1,23 +1,273 @@
 import * as Location from "expo-location";
 import { useEffect, useState, type ReactNode } from "react";
-import { ActivityIndicator, Image, Pressable, StyleSheet, Text, TextInput, View } from "react-native";
+import {
+  ActivityIndicator,
+  Image,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import { ApiError } from "../../api/client";
 import type { UpdateUserRequest } from "../../types/requests";
 import { colors, sharedStyles } from "../../ui/theme";
 import { useAuth } from "../auth/AuthContext";
 
-const splitList = (value: string) => value.split(",").map((item) => item.trim()).filter(Boolean);
-type Props = { title: string; submitLabel: string; completeOnboarding?: boolean; onSaved?: () => void };
+const splitList = (value: string) =>
+  value
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+type Props = {
+  title: string;
+  submitLabel: string;
+  completeOnboarding?: boolean;
+  onSaved?: () => void;
+};
 
-export default function ProfileForm({ title, submitLabel, completeOnboarding = false, onSaved }: Props) {
+export default function ProfileForm({
+  title,
+  submitLabel,
+  completeOnboarding = false,
+  onSaved,
+}: Props) {
   const { user, updateUser } = useAuth();
-  const [name, setName] = useState(""); const [bio, setBio] = useState(""); const [cultures, setCultures] = useState(""); const [explore, setExplore] = useState("");
-  const [latitude, setLatitude] = useState<number | null>(null); const [longitude, setLongitude] = useState<number | null>(null);
-  const [saving, setSaving] = useState(false); const [finding, setFinding] = useState(false); const [message, setMessage] = useState(""); const [error, setError] = useState("");
-  useEffect(() => { if (!user) return; setName(user.name); setBio(user.bio ?? ""); setCultures(user.foodCultures.join(", ")); setExplore(user.foodCulturesToExplore.join(", ")); setLatitude(user.latitude); setLongitude(user.longitude); }, [user]);
-  const locate = async () => { setFinding(true); setError(""); try { const permission = await Location.requestForegroundPermissionsAsync(); if (!permission.granted) { setError("Allow location access to discover nearby food and cooking partners."); return; } const result = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced }); setLatitude(Number(result.coords.latitude.toFixed(2))); setLongitude(Number(result.coords.longitude.toFixed(2))); setMessage("Approximate location added."); } catch { setError("We couldn’t get your location. Please try again."); } finally { setFinding(false); } };
-  const save = async () => { if (!user || !name.trim()) { setError("Enter your preferred name."); return; } const request: UpdateUserRequest = { name: name.trim(), bio: bio.trim() || null, profileImageUrl: user.profileImageUrl, latitude, longitude, foodCultures: splitList(cultures), foodCulturesToExplore: splitList(explore), onboardingCompleted: completeOnboarding || user.onboardingCompleted }; setSaving(true); setError(""); setMessage(""); try { await updateUser(request); setMessage("Profile saved."); onSaved?.(); } catch (caught) { setError(caught instanceof ApiError ? caught.message : "Could not save profile."); } finally { setSaving(false); } };
-  return <View style={styles.wrap}><View style={styles.heading}><Text style={sharedStyles.display}>{title}</Text>{completeOnboarding ? <Text style={sharedStyles.body}>Set up your profile to connect with your local food community.</Text> : null}</View><View style={styles.avatarWrap}>{user?.profileImageUrl ? <Image source={{ uri: user.profileImageUrl }} style={styles.avatar} /> : <View style={styles.avatar}><Text style={styles.initial}>{name.charAt(0).toUpperCase() || "K"}</Text></View>}<Text style={styles.email}>{user?.email}</Text></View><Field label="Preferred name"><TextInput value={name} onChangeText={setName} placeholder="e.g. Aroha" placeholderTextColor="#7A817C" style={sharedStyles.input} /></Field><Field label="A little about you" optional><TextInput value={bio} onChangeText={setBio} maxLength={300} multiline placeholder="I love sharing garden produce and family recipes." placeholderTextColor="#7A817C" style={[sharedStyles.input, styles.bio]} /></Field><View style={[sharedStyles.card, styles.section]}><Text style={sharedStyles.title}>Food cultures</Text><Text style={sharedStyles.body}>Food traditions you enjoy and want to explore.</Text><Field label="Cultures you know"><TextInput value={cultures} onChangeText={setCultures} placeholder="Māori, Italian" placeholderTextColor="#7A817C" style={sharedStyles.input} /></Field><Field label="Cultures to explore"><TextInput value={explore} onChangeText={setExplore} placeholder="Samoan, Chinese" placeholderTextColor="#7A817C" style={sharedStyles.input} /></Field></View><View style={[sharedStyles.card, styles.section]}><Text style={sharedStyles.title}>Approximate location</Text><Text style={sharedStyles.body}>Used only to find food and cooking partners nearby. Your precise location is never shared.</Text><View style={styles.locationRow}><View style={[styles.statusDot, latitude != null && styles.statusReady]} /><Text style={styles.locationStatus}>{latitude != null ? "Location added" : "No location added"}</Text></View><Pressable disabled={finding || saving} onPress={() => void locate()} style={sharedStyles.secondaryButton}>{finding ? <ActivityIndicator color={colors.primary} /> : <Text style={sharedStyles.secondaryButtonText}>{latitude != null ? "Update approximate location" : "Enable location"}</Text>}</Pressable></View>{error ? <View style={sharedStyles.errorBox}><Text style={sharedStyles.errorText}>{error}</Text></View> : null}{message ? <Text style={styles.success}>{message}</Text> : null}<Pressable disabled={saving || finding} onPress={() => void save()} style={sharedStyles.primaryButton}>{saving ? <ActivityIndicator color="white" /> : <Text style={sharedStyles.primaryButtonText}>{submitLabel}  →</Text>}</Pressable></View>;
+  const [name, setName] = useState("");
+  const [bio, setBio] = useState("");
+  const [cultures, setCultures] = useState("");
+  const [explore, setExplore] = useState("");
+  const [latitude, setLatitude] = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [finding, setFinding] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  useEffect(() => {
+    if (!user) return;
+    setName(user.name);
+    setBio(user.bio ?? "");
+    setCultures(user.foodCultures.join(", "));
+    setExplore(user.foodCulturesToExplore.join(", "));
+    setLatitude(user.latitude);
+    setLongitude(user.longitude);
+  }, [user]);
+  const locate = async () => {
+    setFinding(true);
+    setError("");
+    try {
+      const permission = await Location.requestForegroundPermissionsAsync();
+      if (!permission.granted) {
+        setError(
+          "Allow location access to discover nearby food and cooking partners.",
+        );
+        return;
+      }
+      const result = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+      setLatitude(Number(result.coords.latitude.toFixed(2)));
+      setLongitude(Number(result.coords.longitude.toFixed(2)));
+      setMessage("Approximate location added.");
+    } catch {
+      setError("We couldn’t get your location. Please try again.");
+    } finally {
+      setFinding(false);
+    }
+  };
+  const save = async () => {
+    if (!user || !name.trim()) {
+      setError("Enter your preferred name.");
+      return;
+    }
+    const request: UpdateUserRequest = {
+      name: name.trim(),
+      bio: bio.trim() || null,
+      profileImageUrl: user.profileImageUrl,
+      latitude,
+      longitude,
+      foodCultures: splitList(cultures),
+      foodCulturesToExplore: splitList(explore),
+      onboardingCompleted: completeOnboarding || user.onboardingCompleted,
+    };
+    setSaving(true);
+    setError("");
+    setMessage("");
+    try {
+      await updateUser(request);
+      setMessage("Profile saved.");
+      onSaved?.();
+    } catch (caught) {
+      setError(
+        caught instanceof ApiError ? caught.message : "Could not save profile.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+  return (
+    <View style={styles.wrap}>
+      <View style={styles.heading}>
+        <Text style={sharedStyles.display}>{title}</Text>
+        {completeOnboarding ? (
+          <Text style={sharedStyles.body}>
+            Set up your profile to connect with your local food community.
+          </Text>
+        ) : null}
+      </View>
+      <View style={styles.avatarWrap}>
+        {user?.profileImageUrl ? (
+          <Image source={{ uri: user.profileImageUrl }} style={styles.avatar} />
+        ) : (
+          <View style={styles.avatar}>
+            <Text style={styles.initial}>
+              {name.charAt(0).toUpperCase() || "K"}
+            </Text>
+          </View>
+        )}
+        <Text style={styles.email}>{user?.email}</Text>
+      </View>
+      <Field label="Preferred name">
+        <TextInput
+          value={name}
+          onChangeText={setName}
+          placeholder="e.g. Aroha"
+          placeholderTextColor="#7A817C"
+          style={sharedStyles.input}
+        />
+      </Field>
+      <Field label="A little about you" optional>
+        <TextInput
+          value={bio}
+          onChangeText={setBio}
+          maxLength={300}
+          multiline
+          placeholder="I love sharing garden produce and family recipes."
+          placeholderTextColor="#7A817C"
+          style={[sharedStyles.input, styles.bio]}
+        />
+      </Field>
+      <View style={[sharedStyles.card, styles.section]}>
+        <Text style={sharedStyles.title}>Food cultures</Text>
+        <Text style={sharedStyles.body}>
+          Food traditions you enjoy and want to explore.
+        </Text>
+        <Field label="Cultures you know">
+          <TextInput
+            value={cultures}
+            onChangeText={setCultures}
+            placeholder="Māori, Italian"
+            placeholderTextColor="#7A817C"
+            style={sharedStyles.input}
+          />
+        </Field>
+        <Field label="Cultures to explore">
+          <TextInput
+            value={explore}
+            onChangeText={setExplore}
+            placeholder="Samoan, Chinese"
+            placeholderTextColor="#7A817C"
+            style={sharedStyles.input}
+          />
+        </Field>
+      </View>
+      <View style={[sharedStyles.card, styles.section]}>
+        <Text style={sharedStyles.title}>Approximate location</Text>
+        <Text style={sharedStyles.body}>
+          Used only to find food and cooking partners nearby. Your precise
+          location is never shared.
+        </Text>
+        <View style={styles.locationRow}>
+          <View
+            style={[styles.statusDot, latitude != null && styles.statusReady]}
+          />
+          <Text style={styles.locationStatus}>
+            {latitude != null ? "Location added" : "No location added"}
+          </Text>
+        </View>
+        <Pressable
+          disabled={finding || saving}
+          onPress={() => void locate()}
+          style={sharedStyles.secondaryButton}
+        >
+          {finding ? (
+            <ActivityIndicator color={colors.primary} />
+          ) : (
+            <Text style={sharedStyles.secondaryButtonText}>
+              {latitude != null
+                ? "Update approximate location"
+                : "Enable location"}
+            </Text>
+          )}
+        </Pressable>
+      </View>
+      {error ? (
+        <View style={sharedStyles.errorBox}>
+          <Text style={sharedStyles.errorText}>{error}</Text>
+        </View>
+      ) : null}
+      {message ? <Text style={styles.success}>{message}</Text> : null}
+      <Pressable
+        disabled={saving || finding}
+        onPress={() => void save()}
+        style={sharedStyles.primaryButton}
+      >
+        {saving ? (
+          <ActivityIndicator color="white" />
+        ) : (
+          <Text style={sharedStyles.primaryButtonText}>{submitLabel} →</Text>
+        )}
+      </Pressable>
+    </View>
+  );
 }
-function Field({ label, optional, children }: { label: string; optional?: boolean; children: ReactNode }) { return <View style={styles.field}><View style={styles.fieldHeading}><Text style={styles.label}>{label}</Text>{optional ? <Text style={styles.optional}>Optional</Text> : null}</View>{children}</View>; }
-const styles = StyleSheet.create({ wrap: { gap: 20 }, heading: { gap: 6 }, avatarWrap: { alignItems: "center", gap: 8 }, avatar: { alignItems: "center", backgroundColor: colors.secondaryContainer, borderRadius: 52, height: 104, justifyContent: "center", width: 104 }, initial: { color: colors.primary, fontSize: 36, fontWeight: "700" }, email: { color: colors.textMuted, fontSize: 14 }, field: { gap: 8 }, fieldHeading: { flexDirection: "row", justifyContent: "space-between" }, label: { color: colors.text, fontSize: 14, fontWeight: "500" }, optional: { color: colors.outline, fontSize: 13 }, bio: { minHeight: 104, textAlignVertical: "top" }, section: { gap: 14, padding: 16 }, locationRow: { alignItems: "center", flexDirection: "row", gap: 8 }, statusDot: { backgroundColor: colors.outline, borderRadius: 5, height: 10, width: 10 }, statusReady: { backgroundColor: colors.success }, locationStatus: { color: colors.textMuted, fontSize: 14, fontWeight: "600" }, success: { color: colors.success, textAlign: "center" } });
+function Field({
+  label,
+  optional,
+  children,
+}: {
+  label: string;
+  optional?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <View style={styles.field}>
+      <View style={styles.fieldHeading}>
+        <Text style={styles.label}>{label}</Text>
+        {optional ? <Text style={styles.optional}>Optional</Text> : null}
+      </View>
+      {children}
+    </View>
+  );
+}
+const styles = StyleSheet.create({
+  wrap: { gap: 20 },
+  heading: { gap: 6 },
+  avatarWrap: { alignItems: "center", gap: 8 },
+  avatar: {
+    alignItems: "center",
+    backgroundColor: colors.secondaryContainer,
+    borderRadius: 52,
+    height: 104,
+    justifyContent: "center",
+    width: 104,
+  },
+  initial: { color: colors.primary, fontSize: 36, fontWeight: "700" },
+  email: { color: colors.textMuted, fontSize: 14 },
+  field: { gap: 8 },
+  fieldHeading: { flexDirection: "row", justifyContent: "space-between" },
+  label: { color: colors.text, fontSize: 14, fontWeight: "500" },
+  optional: { color: colors.outline, fontSize: 13 },
+  bio: { minHeight: 104, textAlignVertical: "top" },
+  section: { gap: 14, padding: 16 },
+  locationRow: { alignItems: "center", flexDirection: "row", gap: 8 },
+  statusDot: {
+    backgroundColor: colors.outline,
+    borderRadius: 5,
+    height: 10,
+    width: 10,
+  },
+  statusReady: { backgroundColor: colors.success },
+  locationStatus: { color: colors.textMuted, fontSize: 14, fontWeight: "600" },
+  success: { color: colors.success, textAlign: "center" },
+});
