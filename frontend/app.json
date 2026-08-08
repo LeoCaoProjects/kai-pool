@@ -6,10 +6,12 @@
     "orientation": "portrait",
     "userInterfaceStyle": "light",
     "ios": {
+      "bundleIdentifier": "com.leocaoprojects.kaipool",
       "supportsTablet": true
     },
     "android": {
-      "predictiveBackGestureEnabled": false
+      "predictiveBackGestureEnabled": false,
+      "package": "com.leocaoprojects.kaipool"
     },
     "plugins": [
       "expo-router",
@@ -27,7 +29,15 @@
           "locationWhenInUsePermission": "Allow Kai Pool to use your approximate location for local matches."
         }
       ],
-      "expo-font"
+      "expo-font",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
+        }
+      ]
     ]
   }
 }

@@ -5,6 +5,7 @@ import type { ApiErrorResponse } from "../types/api";
 let accessToken: string | null = null;
 let unauthorizedHandler: (() => void) | null = null;
 export const ACCESS_TOKEN_KEY = "kai-pool-token";
+export const AUTH_USER_KEY = "kai-pool-user";
 
 export class ApiError extends Error {
   constructor(

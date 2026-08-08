@@ -25,10 +25,30 @@ function Show-BackendLogs {
 }
 
 function Get-LocalIPv4Address {
+    # Ask Windows which local address it would use for normal outbound traffic.
+    # This avoids accidentally advertising a VPN, WSL, Docker, or virtual adapter.
+    $socket = New-Object System.Net.Sockets.Socket(
+        [System.Net.Sockets.AddressFamily]::InterNetwork,
+        [System.Net.Sockets.SocketType]::Dgram,
+        [System.Net.Sockets.ProtocolType]::Udp)
+
+    try {
+        $socket.Connect("1.1.1.1", 53)
+        $routedAddress = $socket.LocalEndPoint.Address.IPAddressToString
+        if ($routedAddress -and $routedAddress -notmatch '^(127\.|169\.254\.)') {
+            return $routedAddress
+        }
+    } catch {
+        # Fall back to DNS address discovery when there is no outbound route.
+    } finally {
+        $socket.Dispose()
+    }
+
     $addresses = [System.Net.Dns]::GetHostAddresses([System.Net.Dns]::GetHostName()) |
         Where-Object {
             $_.AddressFamily -eq [System.Net.Sockets.AddressFamily]::InterNetwork -and
-            -not [System.Net.IPAddress]::IsLoopback($_)
+            -not [System.Net.IPAddress]::IsLoopback($_) -and
+            $_.IPAddressToString -notmatch '^169\.254\.'
         }
 
     $privateAddress = $addresses |
@@ -129,13 +149,31 @@ try {
     }
 
     $env:EXPO_PUBLIC_API_URL = "http://${localAddress}:8080"
-    Write-Host "Backend ready at $env:EXPO_PUBLIC_API_URL"
-    Write-Host "Starting Expo. Scan the QR code with your iPhone camera."
+    $lanHealthUrl = "$env:EXPO_PUBLIC_API_URL/api/health"
+    try {
+        Invoke-RestMethod $lanHealthUrl -TimeoutSec 3 | Out-Null
+    } catch {
+        Show-BackendLogs
+        throw "The backend works on this computer but is not listening on the LAN address $localAddress."
+    }
+
+    Write-Host ""
+    Write-Host "Backend ready for phones at $env:EXPO_PUBLIC_API_URL" -ForegroundColor Green
+    Write-Host "Phone connection test: $lanHealthUrl"
+    Write-Host ""
+    Write-Host "Every phone must be on the same Wi-Fi as this computer."
+    Write-Host "Public or guest Wi-Fi may block devices from talking to each other."
+    Write-Host "iPhone: scan the QR code with Camera or Expo Go."
+    Write-Host "Android: open Expo Go and tap Scan QR code."
+    Write-Host "If another phone cannot open the connection test URL in its browser,"
+    Write-Host "allow Java and Node.js through Windows Firewall for the current network."
+    Write-Host ""
+    Write-Host "Starting Expo..."
     Write-Host "Keep this window open. Press Ctrl+C when finished."
 
     Push-Location $frontendDirectory
     try {
-        & npx.cmd expo start --lan
+        & npx.cmd expo start --lan --go
         if ($LASTEXITCODE -ne 0) {
             throw "Expo stopped with an error."
         }

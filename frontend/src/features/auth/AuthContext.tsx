@@ -14,6 +14,8 @@ import {
 } from "../../api/auth";
 import {
   ACCESS_TOKEN_KEY,
+  AUTH_USER_KEY,
+  ApiError,
   setApiToken,
   setUnauthorizedHandler,
 } from "../../api/client";
@@ -41,24 +43,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setUnauthorizedHandler(() => setUser(null));
+    setUnauthorizedHandler(() => {
+      setUser(null);
+      void AsyncStorage.multiRemove([ACCESS_TOKEN_KEY, AUTH_USER_KEY]);
+    });
     return () => setUnauthorizedHandler(null);
   }, []);
 
   useEffect(() => {
     const restoreSession = async () => {
-      const token = await AsyncStorage.getItem(ACCESS_TOKEN_KEY);
+      const [token, cachedUserJson] = await Promise.all([
+        AsyncStorage.getItem(ACCESS_TOKEN_KEY),
+        AsyncStorage.getItem(AUTH_USER_KEY),
+      ]);
       if (!token) {
         setLoading(false);
         return;
       }
 
+      let cachedUser: User | null = null;
+      if (cachedUserJson) {
+        try {
+          cachedUser = JSON.parse(cachedUserJson) as User;
+          setUser(cachedUser);
+        } catch {
+          await AsyncStorage.removeItem(AUTH_USER_KEY);
+        }
+      }
+
       setApiToken(token);
       try {
-        setUser(await getAuthenticatedUser());
-      } catch {
-        setApiToken(null);
-        await AsyncStorage.removeItem(ACCESS_TOKEN_KEY);
+        const authenticatedUser = await getAuthenticatedUser();
+        setUser(authenticatedUser);
+        await AsyncStorage.setItem(
+          AUTH_USER_KEY,
+          JSON.stringify(authenticatedUser),
+        );
+      } catch (caught) {
+        if (caught instanceof ApiError && caught.status === 401) {
+          setApiToken(null);
+          setUser(null);
+          await AsyncStorage.multiRemove([ACCESS_TOKEN_KEY, AUTH_USER_KEY]);
+        } else if (!cachedUser) {
+          setUser(null);
+        }
       } finally {
         setLoading(false);
       }
@@ -69,7 +97,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const saveSession = async (token: string, authenticatedUser: User) => {
     setApiToken(token);
-    await AsyncStorage.setItem(ACCESS_TOKEN_KEY, token);
+    await AsyncStorage.multiSet([
+      [ACCESS_TOKEN_KEY, token],
+      [AUTH_USER_KEY, JSON.stringify(authenticatedUser)],
+    ]);
     setUser(authenticatedUser);
   };
 
@@ -84,13 +115,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const updateUser = async (request: UpdateUserRequest) => {
-    setUser(await updateCurrentUserRequest(request));
+    const updatedUser = await updateCurrentUserRequest(request);
+    setUser(updatedUser);
+    await AsyncStorage.setItem(AUTH_USER_KEY, JSON.stringify(updatedUser));
   };
 
   const logout = async () => {
     setApiToken(null);
     setUser(null);
-    await AsyncStorage.removeItem(ACCESS_TOKEN_KEY);
+    await AsyncStorage.multiRemove([ACCESS_TOKEN_KEY, AUTH_USER_KEY]);
   };
 
   return (

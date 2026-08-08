@@ -59,26 +59,33 @@ hapori.
 Node.js, npm, Java 21, and Git are required.
 
 Copy `backend/.env.example` to `backend/.env`, then add your Supabase
-Session pooler details and Gemini API key. From the project folder on
-Windows, run:
+Session pooler details and Gemini API key.
+
+On Windows, run this from the project folder:
 
 ```powershell
 .\start.cmd
 ```
 
+On macOS or Linux, run:
+
+```bash
+bash start.sh
+```
+
 This starts the backend, waits for it to become available, detects the
 computer's local IP, and launches Expo. Scan the displayed QR code with
-your phone and keep the computer and phone on the same network.
+your phone and keep every phone on the same Wi-Fi as the computer. On
+Android, open Expo Go and use its **Scan QR code** button. On iPhone, use
+the Camera app or Expo Go.
 
-## Demo accounts
+The launcher also prints a phone connection test URL. Open it in each
+phone's browser before testing the app. If it does not load, check that the
+network is not a guest network and allow Java and Node.js through Windows
+Firewall for the current network.
 
-All seeded development accounts use the password `123456`. See
-[DEMO_USERS.md](DEMO_USERS.md) for the complete list.
-
-- `aroha@kaipool.nz`
-- `sione@kaipool.nz`
-- `priya@kaipool.nz`
-- `mei@kaipool.nz`
+See [DEMO_USERS.md](DEMO_USERS.md) for the seeded local users and login
+details.
 
 ## Credits
 
