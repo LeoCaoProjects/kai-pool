@@ -50,16 +50,21 @@ export const apiRequest = async <T>(
     headers,
   });
 
-  if (response.status === 401 && requestToken && accessToken === requestToken) {
-    accessToken = null;
-    await AsyncStorage.removeItem(ACCESS_TOKEN_KEY);
-    unauthorizedHandler?.();
-  }
-
   if (!response.ok) {
     const error = (await response
       .json()
       .catch(() => null)) as ApiErrorResponse | null;
+    const sessionIsInvalid =
+      response.status === 401 && error?.message === "Authentication required";
+    if (
+      sessionIsInvalid &&
+      requestToken &&
+      accessToken === requestToken
+    ) {
+      accessToken = null;
+      await AsyncStorage.removeItem(ACCESS_TOKEN_KEY);
+      unauthorizedHandler?.();
+    }
     throw new ApiError(
       error?.message || `API request failed with status ${response.status}`,
       response.status,

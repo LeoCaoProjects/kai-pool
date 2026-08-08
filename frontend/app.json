@@ -19,8 +19,16 @@
         "expo-image-picker",
         {
           "photosPermission": "Allow Kai Pool to choose a food photo.",
-          "cameraPermission": "Allow Kai Pool to take a food photo.",
+          "cameraPermission": false,
           "microphonePermission": false
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Kai Pool to scan food with your camera.",
+          "recordAudioAndroid": false,
+          "barcodeScannerEnabled": false
         }
       ],
       [

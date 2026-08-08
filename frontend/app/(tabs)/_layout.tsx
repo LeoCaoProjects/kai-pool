@@ -1,4 +1,4 @@
-import { Redirect, Tabs } from "expo-router";
+import { Redirect, Tabs, usePathname } from "expo-router";
 import { Text, View } from "react-native";
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -7,6 +7,8 @@ import { useAuth } from "../../src/features/auth/AuthContext";
 
 export default function TabLayout() {
   const { user, loading } = useAuth();
+  const pathname = usePathname();
+  const isScanScreen = pathname.endsWith("/scan");
 
   if (loading) {
     return (
@@ -26,8 +28,11 @@ export default function TabLayout() {
 
   return (
     <SafeAreaView
-      edges={["top", "bottom"]}
-      style={{ backgroundColor: "#FDF9F0", flex: 1 }}
+      edges={isScanScreen ? [] : ["top", "bottom"]}
+      style={{
+        backgroundColor: isScanScreen ? "#000000" : "#FDF9F0",
+        flex: 1,
+      }}
     >
       <Tabs
         screenOptions={{
@@ -35,13 +40,15 @@ export default function TabLayout() {
           tabBarActiveTintColor: "#173124",
           tabBarInactiveTintColor: "#616862",
           tabBarLabelStyle: { fontSize: 11, fontWeight: "600" },
-          tabBarStyle: {
-            backgroundColor: "#FDF9F0",
-            borderTopColor: "#C2C8C2",
-            height: 72,
-            paddingBottom: 10,
-            paddingTop: 8,
-          },
+          tabBarStyle: isScanScreen
+            ? { display: "none" }
+            : {
+                backgroundColor: "#FDF9F0",
+                borderTopColor: "#C2C8C2",
+                height: 72,
+                paddingBottom: 10,
+                paddingTop: 8,
+              },
         }}
       >
         <Tabs.Screen

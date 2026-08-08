@@ -41,13 +41,18 @@ const emptyDraft = (): FoodRequest => ({
   availability: "PRIVATE",
 });
 
-export default function FoodPoolScreen() {
+export default function FoodPoolScreen({
+  previewFoods,
+}: {
+  previewFoods?: FoodItem[];
+}) {
   const router = useRouter();
-  const [foods, setFoods] = useState<FoodItem[]>([]);
+  const previewMode = previewFoods !== undefined;
+  const [foods, setFoods] = useState<FoodItem[]>(previewFoods ?? []);
   const [draft, setDraft] = useState<FoodRequest>(emptyDraft);
   const [editing, setEditing] = useState<FoodItem | null>(null);
   const [showForm, setShowForm] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!previewMode);
   const [refreshing, setRefreshing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -71,8 +76,14 @@ export default function FoodPoolScreen() {
 
   useFocusEffect(
     useCallback(() => {
+      if (previewFoods) {
+        setFoods(previewFoods);
+        setLoading(false);
+        setError("");
+        return;
+      }
       void load();
-    }, [load]),
+    }, [load, previewFoods]),
   );
 
   const openNew = () => {
