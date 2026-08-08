@@ -291,6 +291,8 @@ class FoundationApiTests {
                 .andExpect(jsonPath("$[0].id").value(giveawayId))
                 .andExpect(jsonPath("$[0].name").value("Fresh lemons"))
                 .andExpect(jsonPath("$[0].ownerName").value("Giveaway Owner"))
+                .andExpect(jsonPath("$[0].ownerLatitude").value(-36.99))
+                .andExpect(jsonPath("$[0].ownerLongitude").value(174.86))
                 .andExpect(jsonPath("$[0].distanceKm").isNumber());
 
         mockMvc.perform(post("/api/foods/marketplace/{id}/claim", giveawayId)

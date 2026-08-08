@@ -104,7 +104,7 @@ public class FoodService {
         }
         if (food.getAvailability() != nz.ac.aut.kaipool.domain.FoodAvailability.GIVEAWAY
                 || food.getClaimedBy() != null) {
-            throw new ListingUnavailableException("This giveaway has already been claimed or is no longer available");
+            throw new ListingUnavailableException("This giveaway has already been collected or is no longer available");
         }
         food.setClaimedBy(claimant);
         food.setClaimedAt(Instant.now());
@@ -156,7 +156,7 @@ public class FoodService {
 
     private void ensureNotClaimed(Food food) {
         if (food.getClaimedBy() != null) {
-            throw new ListingUnavailableException("Claimed giveaways cannot be changed or deleted");
+            throw new ListingUnavailableException("Collected giveaways cannot be changed or deleted");
         }
     }
 
@@ -189,7 +189,13 @@ public class FoodService {
                 food.getCreatedAt(),
                 owner.getId(),
                 owner.getName(),
+                approximateMapCoordinate(owner.getLatitude()),
+                approximateMapCoordinate(owner.getLongitude()),
                 distanceKm,
                 food.getClaimedAt());
+    }
+
+    private Double approximateMapCoordinate(Double coordinate) {
+        return coordinate == null ? null : Math.round(coordinate * 100.0) / 100.0;
     }
 }

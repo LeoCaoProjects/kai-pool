@@ -50,12 +50,12 @@ export default function MarketplaceDetailsScreen() {
     try {
       const claimed = await claimMarketplaceFood(id);
       setListing(claimed);
-      Alert.alert("Food claimed", "This giveaway is now saved under My claims.");
+      Alert.alert("Food collected", "This giveaway is now saved under My collections.");
     } catch (caught) {
       const message = caught instanceof ApiError
         ? caught.message
-        : "We couldn't claim this food. Please try again.";
-      Alert.alert("Unable to claim", message);
+        : "We couldn't collect this food. Please try again.";
+      Alert.alert("Unable to collect", message);
       if (caught instanceof ApiError && (caught.status === 404 || caught.status === 409)) {
         setListing(null);
         setError("This giveaway is no longer available.");
@@ -81,7 +81,7 @@ export default function MarketplaceDetailsScreen() {
     );
   }
 
-  const isClaimed = listing.claimedAt != null;
+  const isCollected = listing.claimedAt != null;
   return (
     <ScrollView contentContainerStyle={styles.content} style={styles.screen}>
       {listing.imageUrl ? (
@@ -90,7 +90,7 @@ export default function MarketplaceDetailsScreen() {
         <View style={[styles.hero, styles.heroFallback]}><Text style={styles.heroText}>{listing.name.charAt(0).toUpperCase()}</Text></View>
       )}
       <View style={styles.body}>
-        <Text style={styles.eyebrow}>{isClaimed ? "YOUR CLAIM" : "AVAILABLE GIVEAWAY"}</Text>
+        <Text style={styles.eyebrow}>{isCollected ? "YOUR COLLECTION" : "AVAILABLE IN KAI POOL"}</Text>
         <Text style={styles.title}>{listing.name}</Text>
         <Text style={styles.quantity}>{listing.quantity || "Quantity not specified"}</Text>
 
@@ -107,10 +107,10 @@ export default function MarketplaceDetailsScreen() {
           <Text style={styles.detailValue}>{new Date(listing.createdAt).toLocaleDateString()}</Text>
         </View>
 
-        {isClaimed ? (
+        {isCollected ? (
           <View style={styles.claimedNotice}>
-            <Text style={styles.claimedTitle}>Claim confirmed</Text>
-            <Text style={styles.claimedText}>This food is unavailable to everyone else and saved in My claims.</Text>
+            <Text style={styles.claimedTitle}>Collection confirmed</Text>
+            <Text style={styles.claimedText}>This food is unavailable to everyone else and saved in My collections.</Text>
           </View>
         ) : (
           <Pressable
@@ -119,7 +119,7 @@ export default function MarketplaceDetailsScreen() {
             onPress={() => void claim()}
             style={({ pressed }) => [styles.claimButton, (pressed || claiming) && styles.buttonPressed]}
           >
-            {claiming ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.claimButtonText}>Claim this food</Text>}
+            {claiming ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.claimButtonText}>Collect this food</Text>}
           </Pressable>
         )}
       </View>

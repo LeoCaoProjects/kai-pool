@@ -198,7 +198,7 @@ export default function FoodPoolScreen() {
           <View style={styles.headingRow}>
             <View style={styles.headingCopy}>
               <Text style={sharedStyles.headline}>Local Ingredients</Text>
-              <Text style={sharedStyles.body}>Available for cooking together, sharing, or claiming.</Text>
+              <Text style={sharedStyles.body}>Available for cooking together or sharing through Kai Pool.</Text>
             </View>
             <Pressable accessibilityLabel="Add food" onPress={openNew} style={styles.add}>
               <Text style={styles.addText}>＋</Text>

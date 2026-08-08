@@ -79,6 +79,8 @@ export type CollaborativeMeal = {
 export type MarketplaceFoodItem = Omit<FoodItem, "ownerId"> & {
   ownerId: number;
   ownerName: string;
+  ownerLatitude: number | null;
+  ownerLongitude: number | null;
   distanceKm: number | null;
   claimedAt: string | null;
 };

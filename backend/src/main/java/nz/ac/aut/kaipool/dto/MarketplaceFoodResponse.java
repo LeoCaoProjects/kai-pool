@@ -14,6 +14,8 @@ public record MarketplaceFoodResponse(
         Instant createdAt,
         Long ownerId,
         String ownerName,
+        Double ownerLatitude,
+        Double ownerLongitude,
         Double distanceKm,
         Instant claimedAt) {
 }

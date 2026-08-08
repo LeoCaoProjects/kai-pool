@@ -1,10 +1,13 @@
 package nz.ac.aut.kaipool.ai;
 
+import java.net.http.HttpClient;
+import java.time.Duration;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
@@ -28,8 +31,18 @@ public class FoodRecognitionClient {
 
     public FoodRecognitionClient(
             @Value("${app.ai.api-key:}") String apiKey,
-            @Value("${app.ai.model:gemini-3.6-flash}") String model) {
-        this.restClient = RestClient.create("https://generativelanguage.googleapis.com/v1beta");
+            @Value("${app.ai.model:gemini-3.6-flash}") String model,
+            @Value("${app.ai.timeout-seconds:25}") long timeoutSeconds) {
+        Duration requestTimeout = Duration.ofSeconds(Math.max(5, timeoutSeconds));
+        HttpClient httpClient = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofSeconds(6))
+                .build();
+        JdkClientHttpRequestFactory requestFactory = new JdkClientHttpRequestFactory(httpClient);
+        requestFactory.setReadTimeout(requestTimeout);
+        this.restClient = RestClient.builder()
+                .baseUrl("https://generativelanguage.googleapis.com/v1beta")
+                .requestFactory(requestFactory)
+                .build();
         this.apiKey = apiKey;
         this.model = model;
     }
@@ -64,7 +77,9 @@ public class FoodRecognitionClient {
             }
             throw new FoodRecognitionException("The food recognition service is unavailable. Try again.", exception);
         } catch (RestClientException exception) {
-            throw new FoodRecognitionException("The food recognition service is unavailable. Try again.", exception);
+            throw new FoodRecognitionException(
+                    "Food recognition took too long or is temporarily unavailable. Please try again.",
+                    exception);
         }
     }
 
