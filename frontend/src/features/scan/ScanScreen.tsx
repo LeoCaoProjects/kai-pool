@@ -32,6 +32,7 @@ import { createFood } from "../../api/foods";
 import { scanFood } from "../../api/scan";
 import type { FoodItem } from "../../types/models";
 import { colors } from "../../ui/theme";
+import { KaiTabBarPreview } from "../../ui/KaiTabBar";
 import FoodPoolScreen from "../food/FoodPoolScreen";
 
 type CapturedImage = {
@@ -468,7 +469,7 @@ export default function ScanScreen() {
           <View style={styles.poolBehindContent}>
             <FoodPoolScreen previewFoods={poolPreviewFoods} />
           </View>
-          <FoodPoolTabBarPreview />
+          <KaiTabBarPreview activeRoute="food-pool" />
         </SafeAreaView>
       ) : null}
 
@@ -753,34 +754,6 @@ export default function ScanScreen() {
   );
 }
 
-function FoodPoolTabBarPreview() {
-  const tabs: Array<{
-    icon: keyof typeof Ionicons.glyphMap;
-    label: string;
-    active?: boolean;
-  }> = [
-    { active: true, icon: "file-tray-stacked-outline", label: "Food Pool" },
-    { icon: "compass-outline", label: "Discover" },
-    { icon: "scan-outline", label: "Scan" },
-    { icon: "people-outline", label: "Connections" },
-    { icon: "person-outline", label: "Profile" },
-  ];
-
-  return (
-    <View style={styles.poolPreviewTabs}>
-      {tabs.map((tab) => {
-        const color = tab.active ? colors.primary : "#616862";
-        return (
-          <View key={tab.label} style={styles.poolPreviewTab}>
-            <Ionicons color={color} name={tab.icon} size={23} />
-            <Text style={[styles.poolPreviewLabel, { color }]}>{tab.label}</Text>
-          </View>
-        );
-      })}
-    </View>
-  );
-}
-
 function GalleryBackdrop({
   bottomInset,
   topInset,
@@ -934,26 +907,6 @@ const styles = StyleSheet.create({
     top: 0,
   },
   poolBehindContent: { flex: 1 },
-  poolPreviewTabs: {
-    alignItems: "center",
-    backgroundColor: colors.background,
-    borderTopColor: colors.outline,
-    borderTopWidth: 1,
-    flexDirection: "row",
-    height: 72,
-    paddingBottom: 10,
-    paddingTop: 8,
-  },
-  poolPreviewTab: {
-    alignItems: "center",
-    flex: 1,
-    gap: 3,
-    justifyContent: "center",
-  },
-  poolPreviewLabel: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 11,
-  },
   scanForeground: { backgroundColor: "#000000", flex: 1 },
   loadingScreen: {
     alignItems: "center",
