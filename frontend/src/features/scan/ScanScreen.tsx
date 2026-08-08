@@ -411,7 +411,7 @@ export default function ScanScreen() {
   if (!permission) {
     return (
       <View style={styles.loadingScreen}>
-        <StatusBar style="light" />
+        {screenFocused ? <StatusBar style="light" /> : null}
         <ActivityIndicator color="#FFFFFF" size="large" />
       </View>
     );
@@ -420,7 +420,7 @@ export default function ScanScreen() {
   if (!permission.granted) {
     return (
       <View style={styles.permissionScreen}>
-        <StatusBar style="light" />
+        {screenFocused ? <StatusBar style="light" /> : null}
         <Pressable
           accessibilityLabel="Leave scanner"
           onPress={leaveScanner}
@@ -479,11 +479,13 @@ export default function ScanScreen() {
           { transform: [{ translateX: scanExitX }] },
         ]}
       >
-      <StatusBar
-        backgroundColor="transparent"
-        style={transitioning ? "dark" : "light"}
-        translucent
-      />
+      {screenFocused ? (
+        <StatusBar
+          backgroundColor="transparent"
+          style={transitioning ? "dark" : "light"}
+          translucent
+        />
+      ) : null}
 
       {image ? (
         <Image source={{ uri: image.uri }} style={StyleSheet.absoluteFill} />

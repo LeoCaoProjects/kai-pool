@@ -1,14 +1,31 @@
 import { Redirect, Tabs, usePathname } from "expo-router";
+import { useEffect } from "react";
 import { Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { useAuth } from "../../src/features/auth/AuthContext";
 import KaiTabBar from "../../src/ui/KaiTabBar";
+import { getFoods } from "../../src/api/foods";
+import { getMarketplaceFoods } from "../../src/api/marketplace";
+import { getCookingMatches } from "../../src/api/matches";
+import { getCookingConnections } from "../../src/api/connections";
+import { loadScreenCache } from "../../src/api/screenCache";
 
 export default function TabLayout() {
   const { user, loading } = useAuth();
   const pathname = usePathname();
   const isScanScreen = pathname.endsWith("/scan");
+
+  useEffect(() => {
+    if (!user?.onboardingCompleted) return;
+    // Warm every main tab after sign-in. Failures remain local to each screen.
+    void Promise.allSettled([
+      loadScreenCache("foods", getFoods),
+      loadScreenCache("marketplaceAvailable", getMarketplaceFoods),
+      loadScreenCache("matches", getCookingMatches),
+      loadScreenCache("connections", getCookingConnections),
+    ]);
+  }, [user?.id, user?.onboardingCompleted]);
 
   if (loading) {
     return (

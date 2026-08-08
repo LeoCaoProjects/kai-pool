@@ -3,6 +3,7 @@ import { useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 
+import PageHeader from "../../ui/PageHeader";
 import { colors } from "../../ui/theme";
 import MarketplaceScreen from "../marketplace/MarketplaceScreen";
 import { MatchesScreen } from "./MatchesScreen";
@@ -25,15 +26,11 @@ export default function DiscoverScreen() {
 
   return (
     <View style={styles.screen}>
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.eyebrow}>YOUR NEIGHBOURHOOD</Text>
-          <Text style={styles.title}>Discover</Text>
-        </View>
-        <View style={styles.communityMark}>
-          <Ionicons color={colors.primary} name="sparkles" size={20} />
-        </View>
-      </View>
+      <PageHeader
+        eyebrow="YOUR NEIGHBOURHOOD"
+        icon="compass"
+        title="Discover"
+      />
       <View style={styles.switcher}>
         {(["cook", "food"] as const).map((value) => {
           const active = section === value;
@@ -57,7 +54,7 @@ export default function DiscoverScreen() {
       </View>
       <View style={styles.content}>
         {section === "cook" ? (
-          <MatchesScreen modes={["discover"]} />
+          <MatchesScreen modes={["discover"]} showHeader={false} />
         ) : (
           <MarketplaceScreen />
         )}
@@ -68,34 +65,6 @@ export default function DiscoverScreen() {
 
 const styles = StyleSheet.create({
   screen: { backgroundColor: colors.background, flex: 1 },
-  header: {
-    alignItems: "center",
-    flexDirection: "row",
-    justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingTop: 14,
-  },
-  eyebrow: {
-    color: colors.accent,
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 10,
-    letterSpacing: 1.2,
-  },
-  title: {
-    color: colors.primary,
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 27,
-    letterSpacing: -0.6,
-    marginTop: 2,
-  },
-  communityMark: {
-    alignItems: "center",
-    backgroundColor: colors.secondaryContainer,
-    borderRadius: 21,
-    height: 42,
-    justifyContent: "center",
-    width: 42,
-  },
   switcher: {
     backgroundColor: colors.surfaceHigh,
     borderRadius: 16,

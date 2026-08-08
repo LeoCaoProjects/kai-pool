@@ -20,6 +20,7 @@ import {
   setUnauthorizedHandler,
 } from "../../api/client";
 import { updateCurrentUser as updateCurrentUserRequest } from "../../api/users";
+import { clearScreenCache } from "../../api/screenCache";
 import type { User } from "../../types/models";
 import type {
   LoginRequest,
@@ -44,6 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     setUnauthorizedHandler(() => {
+      clearScreenCache();
       setUser(null);
       void AsyncStorage.multiRemove([ACCESS_TOKEN_KEY, AUTH_USER_KEY]);
     });
@@ -96,6 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const saveSession = async (token: string, authenticatedUser: User) => {
+    clearScreenCache();
     setApiToken(token);
     await AsyncStorage.multiSet([
       [ACCESS_TOKEN_KEY, token],
@@ -121,6 +124,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async () => {
+    clearScreenCache();
     setApiToken(null);
     setUser(null);
     await AsyncStorage.multiRemove([ACCESS_TOKEN_KEY, AUTH_USER_KEY]);

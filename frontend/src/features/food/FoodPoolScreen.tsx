@@ -1,3 +1,4 @@
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useCallback, useState, type ReactNode } from "react";
 import { useFocusEffect, useRouter } from "expo-router";
 import {
@@ -15,11 +16,16 @@ import {
 import { ApiError } from "../../api/client";
 import { createFood, deleteFood, getFoods, updateFood } from "../../api/foods";
 import {
+  loadScreenCache,
+  peekScreenCache,
+} from "../../api/screenCache";
+import {
   FOOD_AVAILABILITIES,
   type FoodAvailability,
   type FoodItem,
 } from "../../types/models";
 import type { FoodRequest } from "../../types/requests";
+import PageHeader from "../../ui/PageHeader";
 import { colors, sharedStyles } from "../../ui/theme";
 
 const labels: Record<FoodAvailability, string> = {
@@ -48,26 +54,34 @@ export default function FoodPoolScreen({
 }) {
   const router = useRouter();
   const previewMode = previewFoods !== undefined;
-  const [foods, setFoods] = useState<FoodItem[]>(previewFoods ?? []);
+  const cachedFoods = previewMode ? undefined : peekScreenCache("foods");
+  const [foods, setFoods] = useState<FoodItem[]>(
+    previewFoods ?? cachedFoods ?? [],
+  );
   const [draft, setDraft] = useState<FoodRequest>(emptyDraft);
   const [editing, setEditing] = useState<FoodItem | null>(null);
   const [showForm, setShowForm] = useState(false);
-  const [loading, setLoading] = useState(!previewMode);
+  const [loading, setLoading] = useState(!previewMode && !cachedFoods);
   const [refreshing, setRefreshing] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
   const load = useCallback(async (refresh = false) => {
-    refresh ? setRefreshing(true) : setLoading(true);
+    const hasVisibleData = peekScreenCache("foods") !== undefined;
+    if (refresh) setRefreshing(true);
+    else if (!hasVisibleData) setLoading(true);
     try {
-      setFoods(await getFoods());
+      const nextFoods = await loadScreenCache("foods", getFoods, true);
+      setFoods(nextFoods);
       setError("");
     } catch (caught) {
-      setError(
-        caught instanceof ApiError
-          ? caught.message
-          : "Could not load your food pool.",
-      );
+      if (!hasVisibleData) {
+        setError(
+          caught instanceof ApiError
+            ? caught.message
+            : "Could not load your food pool.",
+        );
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -172,9 +186,22 @@ export default function FoodPoolScreen({
         />
       }
     >
-      <View style={styles.brand}>
-        <Text style={styles.brandText}>Kai Pool</Text>
-      </View>
+      <PageHeader
+        action={
+          !showForm ? (
+            <Pressable
+              accessibilityLabel="Add food"
+              onPress={openNew}
+              style={styles.add}
+            >
+              <Ionicons color="#FFFFFF" name="add" size={24} />
+            </Pressable>
+          ) : undefined
+        }
+        eyebrow="YOUR KITCHEN"
+        icon="basket"
+        title="Food Pool"
+      />
 
       {showForm ? (
         <View style={styles.form}>
@@ -264,22 +291,6 @@ export default function FoodPoolScreen({
         </View>
       ) : (
         <>
-          <View style={styles.headingRow}>
-            <View style={styles.headingCopy}>
-              <Text style={sharedStyles.headline}>Local Ingredients</Text>
-              <Text style={sharedStyles.body}>
-                Available for cooking together or sharing through Kai Pool.
-              </Text>
-            </View>
-            <Pressable
-              accessibilityLabel="Add food"
-              onPress={openNew}
-              style={styles.add}
-            >
-              <Text style={styles.addText}>＋</Text>
-            </Pressable>
-          </View>
-
           {error ? (
             <Pressable
               onPress={() => void load()}
@@ -361,21 +372,6 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
 
 const styles = StyleSheet.create({
   content: { gap: 16, paddingBottom: 40 },
-  brand: {
-    borderBottomColor: colors.outline,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    paddingHorizontal: 20,
-    paddingVertical: 18,
-  },
-  brandText: { color: colors.primary, fontSize: 20, fontWeight: "700" },
-  headingRow: {
-    alignItems: "center",
-    flexDirection: "row",
-    gap: 12,
-    paddingHorizontal: 20,
-    paddingTop: 14,
-  },
-  headingCopy: { flex: 1, gap: 2 },
   add: {
     alignItems: "center",
     backgroundColor: colors.primary,
@@ -384,7 +380,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     width: 48,
   },
-  addText: { color: "white", fontSize: 26 },
   loader: { marginTop: 40 },
   list: {
     backgroundColor: colors.surface,

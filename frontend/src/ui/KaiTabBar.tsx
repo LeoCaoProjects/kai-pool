@@ -140,7 +140,6 @@ function NavigationSurface({
                   size={scan ? 22 : 23}
                 />
               </View>
-              {active && !scan ? <View style={styles.activeMarker} /> : null}
             </Pressable>
           );
         })}
@@ -192,13 +191,5 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     height: 38,
     width: 42,
-  },
-  activeMarker: {
-    backgroundColor: colors.primary,
-    borderRadius: 999,
-    bottom: 3,
-    height: 3,
-    position: "absolute",
-    width: 16,
   },
 });

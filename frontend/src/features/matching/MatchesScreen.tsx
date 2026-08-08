@@ -1,3 +1,4 @@
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useCallback, useMemo, useState } from "react";
 import { useFocusEffect, useRouter } from "expo-router";
 import {
@@ -18,6 +19,11 @@ import {
   respondToCookingConnection,
 } from "../../api/connections";
 import { getCookingMatches } from "../../api/matches";
+import {
+  loadScreenCache,
+  peekScreenCache,
+  updateScreenCache,
+} from "../../api/screenCache";
 import type { CookingConnection, CookingMatch } from "../../types/models";
 import { colors, sharedStyles } from "../../ui/theme";
 import { useAuth } from "../auth/AuthContext";
@@ -28,35 +34,47 @@ export type MatchMode = "discover" | "requests" | "connections";
 export function MatchesScreen({
   initialMode = "discover",
   modes = ["discover", "requests", "connections"],
+  showHeader = true,
 }: {
   initialMode?: MatchMode;
   modes?: MatchMode[];
+  showHeader?: boolean;
 }) {
   const router = useRouter();
   const { user } = useAuth();
   const [mode, setMode] = useState<MatchMode>(initialMode);
-  const [matches, setMatches] = useState<CookingMatch[]>([]);
-  const [connections, setConnections] = useState<CookingConnection[]>([]);
+  const cachedMatches = peekScreenCache("matches");
+  const cachedConnections = peekScreenCache("connections");
+  const [matches, setMatches] = useState<CookingMatch[]>(cachedMatches ?? []);
+  const [connections, setConnections] = useState<CookingConnection[]>(
+    cachedConnections ?? [],
+  );
   const [busyId, setBusyId] = useState<number | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!cachedMatches || !cachedConnections);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
   const load = useCallback(async (refresh = false) => {
-    refresh ? setRefreshing(true) : setLoading(true);
+    const hasVisibleData =
+      peekScreenCache("matches") !== undefined &&
+      peekScreenCache("connections") !== undefined;
+    if (refresh) setRefreshing(true);
+    else if (!hasVisibleData) setLoading(true);
     setError("");
     try {
       const [foundMatches, foundConnections] = await Promise.all([
-        getCookingMatches(),
-        getCookingConnections(),
+        loadScreenCache("matches", getCookingMatches, true),
+        loadScreenCache("connections", getCookingConnections, true),
       ]);
       setMatches(foundMatches);
       setConnections(foundConnections);
     } catch (caught) {
-      setError(
-        caught instanceof ApiError
-          ? caught.message
-          : "Could not load cooking matches.",
-      );
+      if (!hasVisibleData) {
+        setError(
+          caught instanceof ApiError
+            ? caught.message
+            : "Could not load cooking matches.",
+        );
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -92,6 +110,10 @@ export function MatchesScreen({
         created,
         ...current.filter((item) => item.id !== created.id),
       ]);
+      updateScreenCache("connections", [
+        created,
+        ...connections.filter((item) => item.id !== created.id),
+      ]);
       Alert.alert(
         "Request sent",
         `${match.matchedUserName} can accept or decline your invitation.`,
@@ -114,6 +136,10 @@ export function MatchesScreen({
       const updated = await respondToCookingConnection(connection.id, status);
       setConnections((current) =>
         current.map((item) => (item.id === updated.id ? updated : item)),
+      );
+      updateScreenCache(
+        "connections",
+        connections.map((item) => (item.id === updated.id ? updated : item)),
       );
       if (status === "ACCEPTED") router.push(`/connection/${updated.id}`);
     } catch (caught) {
@@ -155,10 +181,12 @@ export function MatchesScreen({
         />
       }
     >
-      <View style={styles.header}>
-        <Text style={sharedStyles.headline}>{title}</Text>
-        <Text style={styles.subtitle}>{subtitle}</Text>
-      </View>
+      {showHeader ? (
+        <View style={styles.header}>
+          <Text style={sharedStyles.headline}>{title}</Text>
+          <Text style={styles.subtitle}>{subtitle}</Text>
+        </View>
+      ) : null}
       {modes.length > 1 ? (
         <View style={styles.tabs}>
           {modes.map((value) => (
@@ -167,6 +195,17 @@ export function MatchesScreen({
               onPress={() => setMode(value)}
               style={[styles.tab, mode === value && styles.activeTab]}
             >
+              <Ionicons
+                color={mode === value ? "#FFFFFF" : colors.textMuted}
+                name={
+                  value === "requests"
+                    ? "mail-unread-outline"
+                    : value === "connections"
+                      ? "checkmark-circle-outline"
+                      : "compass-outline"
+                }
+                size={17}
+              />
               <Text
                 style={[styles.tabText, mode === value && styles.activeTabText]}
               >
@@ -443,18 +482,26 @@ const styles = StyleSheet.create({
   },
   tabs: {
     backgroundColor: colors.surfaceHigh,
-    borderRadius: 12,
+    borderRadius: 16,
     flexDirection: "row",
     padding: 4,
   },
-  tab: { alignItems: "center", borderRadius: 9, flex: 1, paddingVertical: 9 },
-  activeTab: { backgroundColor: colors.surface },
+  tab: {
+    alignItems: "center",
+    borderRadius: 12,
+    flex: 1,
+    flexDirection: "row",
+    gap: 7,
+    justifyContent: "center",
+    minHeight: 42,
+  },
+  activeTab: { backgroundColor: colors.primary },
   tabText: {
     color: colors.textMuted,
     fontFamily: "Inter_500Medium",
     fontSize: 12,
   },
-  activeTabText: { color: colors.primary, fontFamily: "Inter_600SemiBold" },
+  activeTabText: { color: "#FFFFFF", fontFamily: "Inter_600SemiBold" },
   matchCard: {
     backgroundColor: colors.surface,
     borderColor: colors.surfaceHigh,

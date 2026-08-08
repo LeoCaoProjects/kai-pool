@@ -16,6 +16,7 @@ import {
   getClaimedMarketplaceFoods,
   getMarketplaceFoods,
 } from "../../api/marketplace";
+import { loadScreenCache, peekScreenCache } from "../../api/screenCache";
 import type { MarketplaceFoodItem } from "../../types/models";
 import { colors } from "../../ui/theme";
 import { useAuth } from "../auth/AuthContext";
@@ -28,24 +29,36 @@ export default function MarketplaceScreen() {
   const router = useRouter();
   const { user } = useAuth();
   const [tab, setTab] = useState<MarketplaceTab>("available");
-  const [items, setItems] = useState<MarketplaceFoodItem[]>([]);
+  const initialItems = peekScreenCache("marketplaceAvailable");
+  const [items, setItems] = useState<MarketplaceFoodItem[]>(initialItems ?? []);
   const [selectedOwnerId, setSelectedOwnerId] = useState<number | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!initialItems);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
 
   const loadListings = useCallback(
     async (showRefresh = false) => {
-      showRefresh ? setRefreshing(true) : setLoading(true);
+      const cacheKey =
+        tab === "available" ? "marketplaceAvailable" : "marketplaceClaimed";
+      const cached = peekScreenCache(cacheKey);
+      if (cached) setItems(cached);
+      if (showRefresh) setRefreshing(true);
+      else if (!cached) setLoading(true);
       setError("");
       try {
         setItems(
-          tab === "available"
-            ? await getMarketplaceFoods()
-            : await getClaimedMarketplaceFoods(),
+          await loadScreenCache(
+            cacheKey,
+            tab === "available"
+              ? getMarketplaceFoods
+              : getClaimedMarketplaceFoods,
+            true,
+          ),
         );
       } catch {
-        setError("We couldn't load nearby giveaways right now.");
+        if (!cached) {
+          setError("We couldn't load nearby giveaways right now.");
+        }
       } finally {
         setLoading(false);
         setRefreshing(false);
