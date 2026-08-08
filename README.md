@@ -1,14 +1,47 @@
 # Kai Pool
 
-Created for the AUT South Campus AI Hackathon 2026.
+> *Kia ora, ko Shyam tōku ingoa.*<br>
+> *Me tīmata ahau ki tētahi mea, tata ki toku ngakau.*<br>
+> *Nō Inia ahau, he manene hoki,*<br>
+> *Engari, kaore ano toku hono ki Aotearoa kia tino kaha.*
+>
+> *Hello everyone.*<br>
+> *My name is Shyam, and I'm from an Indian migrant background.*<br>
+> *When I first arrived in Aotearoa, one of the hardest things was finding a sense of belonging.*<br>
+> *Personally, I found that belonging with food.*<br>
+> *It helped me feel more connected to my hapori.*
+>
+> *That experience inspired us to create Kai Pool: kai meaning food, and pool meaning to share.*<br>
+> *It brings cultures, communities, and people together over food.*
+
+Created in 48 hours for the **AUT AI Hackathon Festival 2026** food waste
+challenge. **Awarded second place overall.**
 
 ## About
 
-Kai Pool is our team project for the hackathon's food-waste challenge.
-We will choose the final product direction during the event.
+Kai Pool is a community app designed to reduce household food waste and
+create meaningful local connections. It turns surplus ingredients into
+opportunities to share kai, cook together, and strengthen the community.
 
-This repository contains the shared app foundation, food-pool management,
-AI food recognition, nearby collaborative matching, and cached recipe generation.
+Users photograph their pantry or fridge, review the ingredients identified
+by AI, and add them to a personal food pool. Items marked for giveaway
+appear on a nearby map where another user can collect them. Kai Pool also
+matches people through proximity and available ingredients, suggests meals
+they can prepare together, and supports planning a cookout.
+
+Kai Pool is guided by **manaakitanga**, care and generosity towards others,
+and **whanaungatanga**, relationships built through shared experiences. It
+depends on people choosing to share kai and build connections within their
+hapori.
+
+## How it works
+
+- Photograph food and review the ingredients recognised by AI
+- Keep a personal food pool and mark unwanted items for giveaway
+- Find nearby kai on an interactive map and collect an available listing
+- Discover people through distance, ingredient overlap, food cultures,
+  and suggested meals
+- Send a Cook Together request, accept a connection, and arrange a cookout
 
 ## Built with
 
@@ -18,58 +51,39 @@ AI food recognition, nearby collaborative matching, and cached recipe generation
 - Java 21
 - Spring Boot
 - Gradle
-- PostgreSQL
+- PostgreSQL and Supabase
 - Gemini
-
-## Collaborative meal images
-
-The Matches page always has an immediate representative meal image from the
-local presentation catalogue. Creating the three complete recipes then follows
-this order:
-
-1. Look for a relevant existing meal photograph in TheMealDB.
-2. Optionally generate at most one missing hero image with Cloudflare Workers AI.
-3. Fall back to the closest local meal-category photograph.
-
-Recipe responses, image choices, and any generated image bytes are cached. Merely
-opening or refreshing the Matches page never calls Gemini, TheMealDB, or an image
-generation model.
-
-The free TheMealDB development key is enabled in `backend/.env.example`. Before a
-public production release, replace it with a supporter key. Cloudflare generation
-is optional: set `CLOUDFLARE_ACCOUNT_ID` and `CLOUDFLARE_API_TOKEN` to enable it,
-or leave both blank to keep the fully functional free fallback path.
 
 ## Running locally
 
 Node.js, npm, Java 21, and Git are required.
 
-Create `backend/.env` from `backend/.env.example` once, then add the Supabase
-Session pooler details and Gemini API key. After that, run this from the project
-folder on Windows:
+Copy `backend/.env.example` to `backend/.env`, then add your Supabase
+Session pooler details and Gemini API key. From the project folder on
+Windows, run:
 
 ```powershell
 .\start.cmd
 ```
 
-This starts the backend, waits for it, detects the computer's local IP, and
-starts Expo. Scan the displayed QR code with the iPhone Camera app. Keep the
-computer and phone on the same network.
+This starts the backend, waits for it to become available, detects the
+computer's local IP, and launches Expo. Scan the displayed QR code with
+your phone and keep the computer and phone on the same network.
 
 ## Demo accounts
 
-All seeded development accounts use the password `123456`. See [DEMO_USERS.md](DEMO_USERS.md)
-for the complete test-account list.
+All seeded development accounts use the password `123456`. See
+[DEMO_USERS.md](DEMO_USERS.md) for the complete list.
 
 - `aroha@kaipool.nz`
 - `sione@kaipool.nz`
 - `priya@kaipool.nz`
 - `mei@kaipool.nz`
 
-## Team workflow
+## Credits
 
-- Pull the latest changes before starting
-- Create a `feature/<name>` or `fix/<name>` branch
-- Make focused commits
-- Push the branch and open a pull request
-- Do not commit directly to `main`
+- Leo Cao ([@LeoCaoProjects](https://github.com/LeoCaoProjects)): Developer and designer
+- Fateh Bhular ([@fatehbhular](https://github.com/fatehbhular)): Developer and tester
+- Shawn Lee ([@ShawnLeeyz](https://github.com/ShawnLeeyz)): Developer
+- Shyam Sharma: Business and pitch lead
+- Wei-Xiang Yong ([@LongNightOfSolace2552](https://github.com/LongNightOfSolace2552)): Developer
