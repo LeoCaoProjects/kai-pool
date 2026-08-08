@@ -72,7 +72,7 @@ export default function ConnectionDetailsScreen() {
     }
   };
 
-  if (loading) return <View style={styles.center}><ActivityIndicator color="#28764a" size="large" /></View>;
+  if (loading) return <View style={styles.center}><ActivityIndicator color="#173124" size="large" /></View>;
   if (!connection) return <View style={styles.center}><Text style={styles.errorTitle}>Connection unavailable</Text><Text style={styles.error}>{error}</Text><Pressable onPress={() => router.replace("/(tabs)/matches")} style={styles.backButton}><Text style={styles.backText}>Back to matches</Text></Pressable></View>;
 
   return (
@@ -103,23 +103,23 @@ export default function ConnectionDetailsScreen() {
 }
 
 const styles = StyleSheet.create({
-  page: { backgroundColor: "#f3f1e9", flex: 1 },
+  page: { backgroundColor: "#FDF9F0", flex: 1 },
   content: { gap: 16, padding: 16, paddingBottom: 44 },
-  center: { alignItems: "center", backgroundColor: "#f3f1e9", flex: 1, gap: 10, justifyContent: "center", padding: 28 },
-  connectedBanner: { backgroundColor: "#173f2d", borderRadius: 20, gap: 7, padding: 20 },
+  center: { alignItems: "center", backgroundColor: "#FDF9F0", flex: 1, gap: 10, justifyContent: "center", padding: 28 },
+  connectedBanner: { backgroundColor: "#173124", borderRadius: 16, gap: 7, padding: 20 },
   connectedEyebrow: { color: "#a9dfb9", fontSize: 11, fontWeight: "900", letterSpacing: 1.2 },
   connectedTitle: { color: "white", fontSize: 28, fontWeight: "900" },
   connectedCopy: { color: "#d6e7dc", lineHeight: 21 },
   card: { backgroundColor: "white", borderRadius: 18, gap: 11, padding: 18 },
   divider: { backgroundColor: "#e7e9e5", height: 1, marginVertical: 3 },
   label: { color: "#738078", fontSize: 10, fontWeight: "900", letterSpacing: 1 },
-  email: { color: "#28764a", fontSize: 16, fontWeight: "800", textDecorationLine: "underline" },
+  email: { color: "#173124", fontFamily: "Inter_600SemiBold", fontSize: 16, textDecorationLine: "underline" },
   sectionTitle: { color: "#173f2d", fontSize: 23, fontWeight: "900" },
   help: { color: "#647168", lineHeight: 20, marginBottom: 3 },
   fieldLabel: { color: "#344b40", fontSize: 13, fontWeight: "800", marginTop: 4 },
   input: { backgroundColor: "#f4f5f1", borderColor: "#dce1da", borderRadius: 12, borderWidth: 1, color: "#263b31", fontSize: 15, minHeight: 48, paddingHorizontal: 13, paddingVertical: 11 },
   note: { minHeight: 96, textAlignVertical: "top" },
-  saveButton: { alignItems: "center", backgroundColor: "#28764a", borderRadius: 13, justifyContent: "center", marginTop: 7, minHeight: 50 },
+  saveButton: { alignItems: "center", backgroundColor: "#173124", borderRadius: 12, justifyContent: "center", marginTop: 7, minHeight: 56 },
   saveText: { color: "white", fontSize: 15, fontWeight: "900" },
   disabled: { opacity: 0.65 },
   safety: { backgroundColor: "#fff5df", borderRadius: 16, gap: 5, padding: 16 },

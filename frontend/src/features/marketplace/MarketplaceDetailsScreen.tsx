@@ -66,7 +66,7 @@ export default function MarketplaceDetailsScreen() {
   };
 
   if (loading) {
-    return <View style={styles.center}><ActivityIndicator color="#28764A" size="large" /></View>;
+    return <View style={styles.center}><ActivityIndicator color="#173124" size="large" /></View>;
   }
 
   if (!listing) {
@@ -87,7 +87,7 @@ export default function MarketplaceDetailsScreen() {
       {listing.imageUrl ? (
         <Image resizeMode="cover" source={{ uri: listing.imageUrl }} style={styles.hero} />
       ) : (
-        <View style={[styles.hero, styles.heroFallback]}><Text style={styles.heroEmoji}>🥕</Text></View>
+        <View style={[styles.hero, styles.heroFallback]}><Text style={styles.heroText}>{listing.name.charAt(0).toUpperCase()}</Text></View>
       )}
       <View style={styles.body}>
         <Text style={styles.eyebrow}>{isClaimed ? "YOUR CLAIM" : "AVAILABLE GIVEAWAY"}</Text>
@@ -128,21 +128,21 @@ export default function MarketplaceDetailsScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#F3F1E9" },
+  screen: { flex: 1, backgroundColor: "#FDF9F0" },
   content: { paddingBottom: 40 },
-  center: { alignItems: "center", backgroundColor: "#F3F1E9", flex: 1, justifyContent: "center", padding: 28 },
+  center: { alignItems: "center", backgroundColor: "#FDF9F0", flex: 1, justifyContent: "center", padding: 28 },
   hero: { backgroundColor: "#DDE7D9", height: 280, width: "100%" },
   heroFallback: { alignItems: "center", justifyContent: "center" },
-  heroEmoji: { fontSize: 78 },
+  heroText: { color: "#4E635A", fontFamily: "Inter_600SemiBold", fontSize: 72 },
   body: { padding: 20 },
-  eyebrow: { color: "#28764A", fontSize: 12, fontWeight: "900", letterSpacing: 1.1 },
-  title: { color: "#18392B", fontSize: 32, fontWeight: "900", marginTop: 7 },
+  eyebrow: { color: "#4E635A", fontSize: 12, fontWeight: "600", letterSpacing: 1.1 },
+  title: { color: "#173124", fontSize: 28, fontWeight: "600", marginTop: 7 },
   quantity: { color: "#526158", fontSize: 17, marginTop: 7 },
   detailsCard: { backgroundColor: "#FFFFFF", borderRadius: 18, marginTop: 22, padding: 18 },
   detailLabel: { color: "#778079", fontSize: 12, fontWeight: "700", textTransform: "uppercase" },
   detailValue: { color: "#263C31", fontSize: 17, fontWeight: "700", marginTop: 4 },
   divider: { backgroundColor: "#E8E8E2", height: 1, marginVertical: 14 },
-  claimButton: { alignItems: "center", backgroundColor: "#28764A", borderRadius: 15, marginTop: 22, minHeight: 54, justifyContent: "center", padding: 15 },
+  claimButton: { alignItems: "center", backgroundColor: "#D17B47", borderRadius: 12, marginTop: 22, minHeight: 56, justifyContent: "center", padding: 15 },
   claimButtonText: { color: "#FFFFFF", fontSize: 17, fontWeight: "800" },
   buttonPressed: { opacity: 0.72 },
   claimedNotice: { backgroundColor: "#DCEFE2", borderRadius: 16, marginTop: 22, padding: 18 },
@@ -150,6 +150,6 @@ const styles = StyleSheet.create({
   claimedText: { color: "#41634F", lineHeight: 20, marginTop: 5 },
   errorTitle: { color: "#273C32", fontSize: 23, fontWeight: "900", textAlign: "center" },
   errorText: { color: "#68736C", lineHeight: 21, marginTop: 8, textAlign: "center" },
-  secondaryButton: { borderColor: "#28764A", borderRadius: 14, borderWidth: 1, marginTop: 22, paddingHorizontal: 18, paddingVertical: 13 },
-  secondaryButtonText: { color: "#28764A", fontWeight: "800" },
+  secondaryButton: { borderColor: "#173124", borderRadius: 12, borderWidth: 1, marginTop: 22, paddingHorizontal: 18, paddingVertical: 13 },
+  secondaryButtonText: { color: "#173124", fontWeight: "600" },
 });

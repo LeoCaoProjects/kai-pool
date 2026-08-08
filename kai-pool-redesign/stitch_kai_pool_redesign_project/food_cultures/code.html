@@ -1,0 +1,252 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Kai Pool - Food Culture Selection</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-primary-container": "#98b5a3",
+                        "on-secondary-fixed": "#0b1f18",
+                        "secondary-fixed-dim": "#b5ccc1",
+                        "surface-container-low": "#f7f3ea",
+                        "on-secondary-fixed-variant": "#374b43",
+                        "secondary-fixed": "#d1e8dd",
+                        "error-container": "#ffdad6",
+                        "inverse-primary": "#b0cdbb",
+                        "primary-container": "#2d4739",
+                        "primary-fixed-dim": "#b0cdbb",
+                        "surface-bright": "#fdf9f0",
+                        "on-surface": "#1c1c16",
+                        "surface-variant": "#e6e2d9",
+                        "tertiary": "#4c1e00",
+                        "on-primary": "#ffffff",
+                        "on-tertiary-fixed-variant": "#753403",
+                        "surface-container": "#f2ede4",
+                        "surface-tint": "#496455",
+                        "secondary": "#4e635a",
+                        "surface-dim": "#dedad1",
+                        "on-secondary": "#ffffff",
+                        "background": "#fdf9f0",
+                        "primary": "#173124",
+                        "surface-container-lowest": "#ffffff",
+                        "on-tertiary-container": "#f49760",
+                        "tertiary-container": "#6e2f00",
+                        "tertiary-fixed-dim": "#ffb68e",
+                        "surface-container-highest": "#e6e2d9",
+                        "on-tertiary-fixed": "#331200",
+                        "on-tertiary": "#ffffff",
+                        "on-secondary-container": "#52675e",
+                        "inverse-on-surface": "#f5f0e7",
+                        "outline-variant": "#c2c8c2",
+                        "tertiary-fixed": "#ffdbc9",
+                        "surface-container-high": "#ece8df",
+                        "outline": "#727973",
+                        "on-primary-fixed-variant": "#324c3e",
+                        "on-surface-variant": "#424844",
+                        "surface": "#fdf9f0",
+                        "on-primary-fixed": "#062014",
+                        "primary-fixed": "#ccead6",
+                        "secondary-container": "#cee5da",
+                        "on-error": "#ffffff",
+                        "on-background": "#1c1c16",
+                        "error": "#ba1a1a",
+                        "on-error-container": "#93000a",
+                        "inverse-surface": "#32302a"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "xl": "32px",
+                        "xs": "4px",
+                        "lg": "24px",
+                        "xxl": "48px",
+                        "base": "8px",
+                        "md": "16px",
+                        "margin-desktop": "40px",
+                        "gutter": "16px",
+                        "margin-mobile": "20px",
+                        "sm": "8px"
+                    },
+                    "fontFamily": {
+                        "title-lg": ["Inter"],
+                        "label-md": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "display-lg-mobile": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "button": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "body-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "title-lg": ["20px", { "lineHeight": "28px", "fontWeight": "500" }],
+                        "label-md": ["12px", { "lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "500" }],
+                        "display-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+                        "display-lg-mobile": ["28px", { "lineHeight": "36px", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "button": ["15px", { "lineHeight": "20px", "fontWeight": "600" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            background-color: #fdf9f0; /* surface */
+            color: #1c1c16; /* on-surface */
+            -webkit-font-smoothing: antialiased;
+        }
+        
+        .chip {
+            transition: all 0.2s ease-in-out;
+        }
+        
+        .chip[data-selected="true"] {
+            background-color: #173124; /* primary */
+            color: #ffffff; /* on-primary */
+            border-color: #173124;
+        }
+        
+        .chip[data-selected="false"] {
+            background-color: #ffffff; /* surface-container-lowest */
+            color: #424844; /* on-surface-variant */
+            border-color: #c2c8c2; /* outline-variant */
+        }
+        
+        .chip:hover[data-selected="false"] {
+            background-color: #f7f3ea; /* surface-container-low */
+        }
+        
+        .chip:active {
+            transform: scale(0.98);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col bg-surface font-body-lg text-on-surface">
+<!-- TopAppBar -->
+<header class="flex justify-between items-center h-16 px-margin-mobile w-full z-50 bg-surface border-b border-outline-variant docked full-width top-0 transition-colors duration-200">
+<button aria-label="Go back" class="flex items-center justify-center w-12 h-12 rounded-full hover:bg-surface-container text-on-surface-variant transition-colors">
+<span class="material-symbols-outlined" data-icon="arrow_back">arrow_back</span>
+</button>
+<h1 class="font-title-lg text-title-lg font-bold text-primary tracking-tight">
+            Kai Pool
+        </h1>
+<!-- Empty div for flex balance -->
+<div class="w-12"></div>
+</header>
+<!-- Main Canvas -->
+<main class="flex-grow flex flex-col px-margin-mobile py-lg max-w-[600px] mx-auto w-full pb-32">
+<div class="mb-xl">
+<h2 class="font-headline-md text-headline-md text-on-surface mb-sm font-bold">What flavours feel like home?</h2>
+<p class="font-body-lg text-body-lg text-on-surface-variant">Select the food cultures you're familiar with or excited to explore. This helps us match you with the right communities.</p>
+</div>
+<!-- My Cultures Section -->
+<section class="mb-xxl">
+<div class="flex items-center justify-between mb-md border-b border-outline-variant pb-xs">
+<h3 class="font-title-lg text-title-lg text-on-surface">My cultures</h3>
+<span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-widest">Select multiple</span>
+</div>
+<div class="flex flex-wrap gap-base">
+<button class="chip px-md py-sm border border-outline-variant font-button text-button flex items-center gap-xs shadow-sm" data-selected="true" onclick="toggleChip(this)">
+                    Māori
+                    <span class="material-symbols-outlined text-[16px] leading-none" data-icon="check" style="display: inline-block;">check</span>
+</button>
+<button class="chip px-md py-sm border border-outline-variant font-button text-button flex items-center gap-xs shadow-sm" data-selected="false" onclick="toggleChip(this)">
+                    Pasifika
+                    <span class="material-symbols-outlined text-[16px] leading-none hidden" data-icon="check">check</span>
+</button>
+<button class="chip px-md py-sm border border-outline-variant font-button text-button flex items-center gap-xs shadow-sm" data-selected="true" onclick="toggleChip(this)">
+                    European
+                    <span class="material-symbols-outlined text-[16px] leading-none" data-icon="check" style="display: inline-block;">check</span>
+</button>
+<button class="chip px-md py-sm border border-outline-variant font-button text-button flex items-center gap-xs shadow-sm" data-selected="false" onclick="toggleChip(this)">
+                    Asian
+                    <span class="material-symbols-outlined text-[16px] leading-none hidden" data-icon="check">check</span>
+</button>
+<button class="chip px-md py-sm border border-outline-variant font-button text-button flex items-center gap-xs shadow-sm" data-selected="false" onclick="toggleChip(this)">
+                    Middle Eastern
+                    <span class="material-symbols-outlined text-[16px] leading-none hidden" data-icon="check">check</span>
+</button>
+</div>
+</section>
+<!-- Cultures to Explore Section -->
+<section class="mb-xl">
+<div class="flex items-center justify-between mb-md border-b border-outline-variant pb-xs">
+<h3 class="font-title-lg text-title-lg text-on-surface">Cultures to explore</h3>
+<span class="font-label-md text-label-md text-on-surface-variant uppercase tracking-widest">Optional</span>
+</div>
+<div class="flex flex-wrap gap-base">
+<button class="chip px-md py-sm border border-outline-variant font-button text-button flex items-center gap-xs shadow-sm" data-selected="false" onclick="toggleChip(this)">
+                    Chinese
+                    <span class="material-symbols-outlined text-[16px] leading-none hidden" data-icon="check">check</span>
+</button>
+<button class="chip px-md py-sm border border-outline-variant font-button text-button flex items-center gap-xs shadow-sm" data-selected="false" onclick="toggleChip(this)">
+                    Indian
+                    <span class="material-symbols-outlined text-[16px] leading-none hidden" data-icon="check">check</span>
+</button>
+<button class="chip px-md py-sm border border-outline-variant font-button text-button flex items-center gap-xs shadow-sm" data-selected="true" onclick="toggleChip(this)">
+                    Japanese
+                    <span class="material-symbols-outlined text-[16px] leading-none" data-icon="check" style="display: inline-block;">check</span>
+</button>
+<button class="chip px-md py-sm border border-outline-variant font-button text-button flex items-center gap-xs shadow-sm" data-selected="false" onclick="toggleChip(this)">
+                    Korean
+                    <span class="material-symbols-outlined text-[16px] leading-none hidden" data-icon="check">check</span>
+</button>
+<button class="chip px-md py-sm border border-outline-variant font-button text-button flex items-center gap-xs shadow-sm" data-selected="false" onclick="toggleChip(this)">
+                    Thai
+                    <span class="material-symbols-outlined text-[16px] leading-none hidden" data-icon="check">check</span>
+</button>
+<button class="chip px-md py-sm border border-outline-variant font-button text-button flex items-center gap-xs shadow-sm" data-selected="false" onclick="toggleChip(this)">
+                    Vietnamese
+                    <span class="material-symbols-outlined text-[16px] leading-none hidden" data-icon="check">check</span>
+</button>
+<button class="chip px-md py-sm border border-outline-variant font-button text-button flex items-center gap-xs shadow-sm" data-selected="false" onclick="toggleChip(this)">
+                    Mexican
+                    <span class="material-symbols-outlined text-[16px] leading-none hidden" data-icon="check">check</span>
+</button>
+<button class="chip px-md py-sm border border-outline-variant font-button text-button flex items-center gap-xs shadow-sm" data-selected="false" onclick="toggleChip(this)">
+                    Mediterranean
+                    <span class="material-symbols-outlined text-[16px] leading-none hidden" data-icon="check">check</span>
+</button>
+</div>
+</section>
+</main>
+<!-- Fixed Action Bottom Bar (Replaces standard BottomNavBar for transactional flow) -->
+<div class="fixed bottom-0 left-0 w-full bg-surface-container-lowest border-t border-outline-variant p-margin-mobile z-50 flex justify-end items-center shadow-[0_-4px_20px_rgba(0,0,0,0.02)]">
+<button class="bg-primary text-on-primary font-button text-button px-xl py-sm hover:bg-on-primary-fixed-variant transition-colors flex items-center gap-xs shadow-sm h-12 active:scale-95 duration-150 rounded-lg">
+            Continue
+            <span class="material-symbols-outlined text-[20px]" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</div>
+<script>
+        function toggleChip(button) {
+            const isSelected = button.getAttribute('data-selected') === 'true';
+            button.setAttribute('data-selected', !isSelected);
+            
+            const icon = button.querySelector('.material-symbols-outlined');
+            if (icon) {
+                if (!isSelected) {
+                    icon.style.display = 'inline-block';
+                    icon.classList.remove('hidden');
+                } else {
+                    icon.style.display = 'none';
+                    icon.classList.add('hidden');
+                }
+            }
+        }
+    </script>
+
+
+</body></html>

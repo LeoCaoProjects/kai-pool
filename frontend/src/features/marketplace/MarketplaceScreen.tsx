@@ -27,7 +27,7 @@ function ListingCard({ item, claimed }: { item: MarketplaceFoodItem; claimed: bo
       {item.imageUrl ? (
         <Image source={{ uri: item.imageUrl }} resizeMode="cover" style={styles.image} />
       ) : (
-        <View style={styles.imageFallback}><Text style={styles.fallbackEmoji}>🥕</Text></View>
+        <View style={styles.imageFallback}><Text style={styles.fallbackText}>{item.name.charAt(0).toUpperCase()}</Text></View>
       )}
       <View style={styles.cardBody}>
         <View style={styles.cardHeading}>
@@ -101,7 +101,7 @@ export default function MarketplaceScreen() {
         ))}
       </View>
 
-      {loading ? <ActivityIndicator color="#28764A" size="large" style={styles.loader} /> : null}
+      {loading ? <ActivityIndicator color="#173124" size="large" style={styles.loader} /> : null}
       {error ? (
         <Pressable onPress={() => void loadListings()} style={styles.messageCard}>
           <Text style={styles.error}>{error} Tap to retry.</Text>
@@ -125,10 +125,10 @@ export default function MarketplaceScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { flex: 1, backgroundColor: "#F3F1E9" },
+  screen: { flex: 1, backgroundColor: "#FDF9F0" },
   content: { padding: 18, paddingBottom: 42 },
-  eyebrow: { color: "#28764A", fontSize: 12, fontWeight: "800", letterSpacing: 1.2, marginTop: 6 },
-  title: { color: "#18392B", fontSize: 29, fontWeight: "900", lineHeight: 34, marginTop: 7 },
+  eyebrow: { color: "#4E635A", fontSize: 12, fontWeight: "600", letterSpacing: 1.2, marginTop: 6 },
+  title: { color: "#173124", fontSize: 28, fontWeight: "600", lineHeight: 36, marginTop: 7 },
   subtitle: { color: "#5C685F", fontSize: 15, lineHeight: 21, marginTop: 6 },
   tabs: { backgroundColor: "#E3E6DC", borderRadius: 14, flexDirection: "row", marginBottom: 18, marginTop: 20, padding: 4 },
   tab: { alignItems: "center", borderRadius: 11, flex: 1, paddingHorizontal: 8, paddingVertical: 10 },
@@ -136,12 +136,12 @@ const styles = StyleSheet.create({
   tabText: { color: "#647067", fontSize: 13, fontWeight: "700" },
   activeTabText: { color: "#215F3D" },
   loader: { marginTop: 38 },
-  card: { backgroundColor: "#FFFFFF", borderColor: "#E0DED5", borderRadius: 18, borderWidth: 1, flexDirection: "row", marginBottom: 13, minHeight: 132, overflow: "hidden" },
+  card: { backgroundColor: "#FFFFFF", borderColor: "#E6E2D9", borderRadius: 16, borderWidth: 1, marginBottom: 16, overflow: "hidden" },
   cardPressed: { opacity: 0.82 },
-  image: { backgroundColor: "#DDE7D9", width: 126 },
-  imageFallback: { alignItems: "center", backgroundColor: "#DDE7D9", justifyContent: "center", width: 126 },
-  fallbackEmoji: { fontSize: 42 },
-  cardBody: { flex: 1, justifyContent: "center", padding: 14 },
+  image: { aspectRatio: 4 / 3, backgroundColor: "#E6E2D9", width: "100%" },
+  imageFallback: { alignItems: "center", aspectRatio: 4 / 3, backgroundColor: "#E6E2D9", justifyContent: "center", width: "100%" },
+  fallbackText: { color: "#4E635A", fontFamily: "Inter_600SemiBold", fontSize: 56 },
+  cardBody: { padding: 16 },
   cardHeading: { alignItems: "flex-start", flexDirection: "row", gap: 8 },
   foodName: { color: "#1E352A", flex: 1, fontSize: 19, fontWeight: "800" },
   badge: { backgroundColor: "#DCEFE2", borderRadius: 10, paddingHorizontal: 7, paddingVertical: 4 },
@@ -150,7 +150,7 @@ const styles = StyleSheet.create({
   claimedBadgeText: { color: "#675478" },
   quantity: { color: "#4D5951", fontSize: 14, marginTop: 8 },
   owner: { color: "#6A746E", fontSize: 13, marginTop: 5 },
-  distance: { color: "#28764A", fontSize: 13, fontWeight: "700", marginTop: 5 },
+  distance: { color: "#2D4739", fontSize: 13, fontWeight: "600", marginTop: 5 },
   messageCard: { backgroundColor: "#FFFFFF", borderRadius: 16, marginTop: 16, padding: 22 },
   emptyTitle: { color: "#263B31", fontSize: 18, fontWeight: "800", textAlign: "center" },
   emptyText: { color: "#677169", lineHeight: 21, marginTop: 7, textAlign: "center" },

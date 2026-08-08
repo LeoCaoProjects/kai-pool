@@ -1,0 +1,197 @@
+<!DOCTYPE html><html class="h-full" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Food Details - Kai Pool</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-primary-container": "#98b5a3",
+                        "on-secondary-fixed": "#0b1f18",
+                        "secondary-fixed-dim": "#b5ccc1",
+                        "surface-container-low": "#f7f3ea",
+                        "on-secondary-fixed-variant": "#374b43",
+                        "secondary-fixed": "#d1e8dd",
+                        "error-container": "#ffdad6",
+                        "inverse-primary": "#b0cdbb",
+                        "primary-container": "#2d4739",
+                        "primary-fixed-dim": "#b0cdbb",
+                        "surface-bright": "#fdf9f0",
+                        "on-surface": "#1c1c16",
+                        "surface-variant": "#e6e2d9",
+                        "tertiary": "#4c1e00",
+                        "on-primary": "#ffffff",
+                        "on-tertiary-fixed-variant": "#753403",
+                        "surface-container": "#f2ede4",
+                        "surface-tint": "#496455",
+                        "secondary": "#4e635a",
+                        "surface-dim": "#dedad1",
+                        "on-secondary": "#ffffff",
+                        "background": "#fdf9f0",
+                        "primary": "#173124",
+                        "surface-container-lowest": "#ffffff",
+                        "on-tertiary-container": "#f49760",
+                        "tertiary-container": "#6e2f00",
+                        "tertiary-fixed-dim": "#ffb68e",
+                        "surface-container-highest": "#e6e2d9",
+                        "on-tertiary-fixed": "#331200",
+                        "on-tertiary": "#ffffff",
+                        "on-secondary-container": "#52675e",
+                        "inverse-on-surface": "#f5f0e7",
+                        "outline-variant": "#c2c8c2",
+                        "tertiary-fixed": "#ffdbc9",
+                        "surface-container-high": "#ece8df",
+                        "outline": "#727973",
+                        "on-primary-fixed-variant": "#324c3e",
+                        "on-surface-variant": "#424844",
+                        "surface": "#fdf9f0",
+                        "on-primary-fixed": "#062014",
+                        "primary-fixed": "#ccead6",
+                        "secondary-container": "#cee5da",
+                        "on-error": "#ffffff",
+                        "on-background": "#1c1c16",
+                        "error": "#ba1a1a",
+                        "on-error-container": "#93000a",
+                        "inverse-surface": "#32302a"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "xl": "32px",
+                        "xs": "4px",
+                        "lg": "24px",
+                        "xxl": "48px",
+                        "base": "8px",
+                        "md": "16px",
+                        "margin-desktop": "40px",
+                        "gutter": "16px",
+                        "margin-mobile": "20px",
+                        "sm": "8px"
+                    },
+                    "fontFamily": {
+                        "title-lg": ["Inter"],
+                        "label-md": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "display-lg-mobile": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "button": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "body-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "title-lg": ["20px", { "lineHeight": "28px", "fontWeight": "500" }],
+                        "label-md": ["12px", { "lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "500" }],
+                        "display-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+                        "display-lg-mobile": ["28px", { "lineHeight": "36px", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "button": ["15px", { "lineHeight": "20px", "fontWeight": "600" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .material-symbols-outlined.fill {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+    </style>
+</head>
+<body class="bg-background text-on-background h-full flex flex-col font-body-lg">
+<!-- TopAppBar -->
+<header class="bg-surface dark:bg-surface-dim border-b border-outline-variant dark:border-outline docked full-width top-0 z-50 flex justify-between items-center h-16 px-margin-mobile w-full transition-colors duration-200">
+<a class="flex items-center text-primary dark:text-primary-fixed hover:bg-surface-container dark:hover:bg-surface-container-high rounded-full p-2 -ml-2 transition-colors" href="#">
+<span class="material-symbols-outlined">arrow_back</span>
+</a>
+<h1 class="font-title-lg text-title-lg font-bold text-primary dark:text-primary-fixed">Kai Pool</h1>
+ <!-- Placeholder for balance -->
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-1 overflow-y-auto pb-xxl">
+<!-- Hero Image -->
+<div class="w-full aspect-[4/3] md:aspect-[16/9] lg:aspect-[21/9] bg-surface-container relative">
+<img alt="Fresh Kūmara" class="w-full h-full object-cover" data-alt="A beautiful, high-quality, close-up photograph of freshly harvested Kūmara (sweet potatoes) resting in a woven basket. The setting is warm and inviting, illuminated by soft, natural light that highlights the rich, earthy red and orange tones of the skin. The background is slightly blurred, showing a modern, clean kitchen environment consistent with a community food sharing app. The mood is fresh, organic, and neighborly." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA-nCyT72ynfN4QdkPmZVLceWqmnfAY5nsVcmk7gRms9YjY_TcmJBvnLps9zx10bmUuV2Vg9gEiiD4PgYnBB2_Wmz86dYzAxP9--xMCoI6cHqRIKlYg0X8knBohr0CyVtDlgeBLNczXHt1V4HBBbr41tZH7hwMjM6sn2sqW38fQ5lyp5UZODAqfCcri6ZUoTpEhfZxJyqpWRY24psydZGO9x64XYKS7TFyntp0odMzVWNEfn1Jj5nM">
+<div class="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-black/60 to-transparent"></div>
+</div>
+<!-- Content Container -->
+<div class="max-w-[800px] mx-auto px-margin-mobile -mt-xl relative z-10">
+<!-- Header Card -->
+<div class="bg-surface rounded-xl p-lg border border-outline-variant shadow-sm mb-lg">
+<div class="flex justify-between items-start mb-md">
+<div>
+<h2 class="font-display-lg-mobile md:font-display-lg text-display-lg-mobile md:text-display-lg text-primary mb-xs">Freshly Dug Kūmara</h2>
+<p class="font-body-lg text-body-lg text-on-surface-variant flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">location_on</span>
+                            Mount Wellington Community Garden
+                        </p>
+</div>
+<span class="inline-flex items-center px-3 py-1 rounded-full bg-secondary-container text-primary border border-outline-variant font-label-md text-label-md">Available Now</span>
+</div>
+<p class="font-body-lg text-body-lg text-on-surface mb-lg">
+                    Just harvested these beautiful red kūmara from our community patch. Perfect for roasting or making a warming soup. Plenty to share with neighbors!
+                </p>
+<!-- Grid Details -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-md border-t border-outline-variant pt-md">
+<div>
+<span class="font-label-md text-label-md text-on-surface-variant block mb-1">Quantity</span>
+<span class="font-title-lg text-title-lg text-primary">Approx 3kg</span>
+</div>
+<div>
+<span class="font-label-md text-label-md text-on-surface-variant block mb-1">Added On</span>
+<span class="font-title-lg text-title-lg text-primary">Oct 12, 2023</span>
+</div>
+<div>
+<span class="font-label-md text-label-md text-on-surface-variant block mb-1">Category</span>
+<span class="font-title-lg text-title-lg text-primary">Root Veg</span>
+</div>
+<div>
+<span class="font-label-md text-label-md text-on-surface-variant block mb-1">Shared By</span>
+<div class="flex items-center gap-2 mt-1">
+<div class="w-6 h-6 rounded-full bg-primary-container flex items-center justify-center text-on-primary-container font-label-md text-[10px]">
+                                JS
+                            </div>
+<span class="font-body-sm text-body-sm text-primary">Sarah</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Action Area -->
+<div class="flex flex-col gap-md">
+<button class="w-full bg-primary hover:bg-surface-tint text-on-primary rounded-lg py-3 px-6 font-button text-button transition-colors flex items-center justify-center gap-2 shadow-sm">
+<span class="material-symbols-outlined text-[18px]">edit</span>
+                    Edit Details
+                </button>
+<div class="grid grid-cols-2 gap-md">
+<button class="w-full bg-secondary-container hover:bg-surface-variant text-on-secondary-container border border-outline-variant rounded-full py-3 px-6 font-button text-button transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[18px]">check_circle</span>
+                        Update Status
+                    </button>
+<button class="w-full bg-surface hover:bg-error-container text-error border border-error rounded-full py-3 px-6 font-button text-button transition-colors flex items-center justify-center gap-2">
+<span class="material-symbols-outlined text-[18px]">delete</span>
+                        Delete
+                    </button>
+</div>
+</div>
+</div>
+</main>
+
+
+</body></html>

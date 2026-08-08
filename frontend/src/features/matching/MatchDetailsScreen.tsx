@@ -6,6 +6,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  useWindowDimensions,
   View,
 } from "react-native";
 
@@ -15,6 +16,7 @@ import type { CollaborativeMeal, CookingMatch } from "../../types/models";
 import { ContributionPanel, MealHero, PersonSummary } from "./MatchingComponents";
 
 export default function MatchDetailsScreen() {
+  const { width } = useWindowDimensions();
   const params = useLocalSearchParams<{ matchedUserId?: string | string[] }>();
   const rawId = Array.isArray(params.matchedUserId) ? params.matchedUserId[0] : params.matchedUserId;
   const matchedUserId = Number(rawId);
@@ -61,7 +63,7 @@ export default function MatchDetailsScreen() {
   if (loading) {
     return (
       <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#28764a" />
+        <ActivityIndicator size="large" color="#173124" />
         <Text style={styles.loadingText}>Preparing your match…</Text>
       </View>
     );
@@ -99,7 +101,7 @@ export default function MatchDetailsScreen() {
       <View style={styles.sectionCard}>
         <Text style={styles.eyebrow}>THE SHARED POOL</Text>
         <Text style={styles.sectionTitle}>What each person contributes</Text>
-        <View style={styles.contributions}>
+        <View style={[styles.contributions, width < 380 && styles.contributionsSmall]}>
           <ContributionPanel title="You bring" foods={match.yourContributions} tone="you" />
           <ContributionPanel
             title={`${match.matchedUserName.split(" ")[0]} brings`}
@@ -204,21 +206,22 @@ export default function MatchDetailsScreen() {
 }
 
 const styles = StyleSheet.create({
-  page: { flex: 1, backgroundColor: "#f3f1e9" },
+  page: { flex: 1, backgroundColor: "#FDF9F0" },
   screen: { gap: 18, padding: 16, paddingBottom: 48 },
-  centered: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, padding: 28, backgroundColor: "#f3f1e9" },
+  centered: { flex: 1, alignItems: "center", justifyContent: "center", gap: 12, padding: 28, backgroundColor: "#FDF9F0" },
   loadingText: { color: "#46584f", fontWeight: "700" },
   heroCard: { overflow: "hidden", borderRadius: 22, backgroundColor: "white" },
   heroBody: { gap: 18, padding: 16, paddingTop: 10 },
   description: { color: "#3d4d45", fontSize: 15, lineHeight: 22 },
-  sectionCard: { gap: 15, padding: 17, borderRadius: 19, backgroundColor: "white" },
-  eyebrow: { color: "#28764a", fontSize: 10, fontWeight: "900", letterSpacing: 1.2 },
-  sectionTitle: { color: "#173f2d", fontSize: 23, lineHeight: 27, fontWeight: "900" },
+  sectionCard: { gap: 15, padding: 17, borderColor: "#E6E2D9", borderRadius: 16, borderWidth: 1, backgroundColor: "white" },
+  eyebrow: { color: "#4E635A", fontFamily: "Inter_600SemiBold", fontSize: 10, letterSpacing: 1.2 },
+  sectionTitle: { color: "#173124", fontSize: 24, lineHeight: 32, fontWeight: "600" },
   contributions: { flexDirection: "row", gap: 10 },
+  contributionsSmall: { flexDirection: "column" },
   reasonBox: { gap: 5, padding: 13, borderRadius: 12, backgroundColor: "#eef8f0" },
-  reasonLabel: { color: "#28764a", fontSize: 10, fontWeight: "900", letterSpacing: 1 },
+  reasonLabel: { color: "#4E635A", fontFamily: "Inter_600SemiBold", fontSize: 10, letterSpacing: 1 },
   reason: { color: "#315440", lineHeight: 20 },
-  generatorCard: { gap: 14, padding: 19, borderRadius: 20, backgroundColor: "#173f2d" },
+  generatorCard: { gap: 14, padding: 19, borderRadius: 16, backgroundColor: "#173124" },
   generatorEyebrow: { color: "#a9dfb9", fontSize: 10, fontWeight: "900", letterSpacing: 1.2 },
   generatorTitle: { color: "white", fontSize: 24, lineHeight: 28, fontWeight: "900" },
   generatorCopy: { color: "#d6e7dc", lineHeight: 21 },
@@ -240,7 +243,7 @@ const styles = StyleSheet.create({
   recipeBody: { gap: 15, padding: 16, paddingTop: 10 },
   recipeContributions: { flexDirection: "row", gap: 9 },
   recipeContribution: { flex: 1, gap: 4, padding: 11, borderRadius: 12, backgroundColor: "#f4f5f2" },
-  recipeLabel: { color: "#28764a", fontSize: 9, fontWeight: "900", letterSpacing: 0.8 },
+  recipeLabel: { color: "#4E635A", fontFamily: "Inter_600SemiBold", fontSize: 9, letterSpacing: 0.8 },
   recipeValue: { color: "#3f5047", fontSize: 13, lineHeight: 18 },
   optionalBox: { gap: 4, padding: 11, borderRadius: 11, backgroundColor: "#fff5df" },
   optionalLabel: { color: "#946017", fontSize: 9, fontWeight: "900", letterSpacing: 0.8 },

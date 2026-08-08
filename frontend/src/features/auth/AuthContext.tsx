@@ -6,12 +6,10 @@ import {
   login as loginRequest,
   register as registerRequest,
 } from "../../api/auth";
-import { setApiToken } from "../../api/client";
+import { ACCESS_TOKEN_KEY, setApiToken, setUnauthorizedHandler } from "../../api/client";
 import { updateCurrentUser as updateCurrentUserRequest } from "../../api/users";
 import type { User } from "../../types/models";
 import type { LoginRequest, RegisterRequest, UpdateUserRequest } from "../../types/requests";
-
-const TOKEN_KEY = "kai-pool-token";
 
 type AuthContextValue = {
   user: User | null;
@@ -29,8 +27,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    setUnauthorizedHandler(() => setUser(null));
+    return () => setUnauthorizedHandler(null);
+  }, []);
+
+  useEffect(() => {
     const restoreSession = async () => {
-      const token = await AsyncStorage.getItem(TOKEN_KEY);
+      const token = await AsyncStorage.getItem(ACCESS_TOKEN_KEY);
       if (!token) {
         setLoading(false);
         return;
@@ -41,7 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(await getAuthenticatedUser());
       } catch {
         setApiToken(null);
-        await AsyncStorage.removeItem(TOKEN_KEY);
+        await AsyncStorage.removeItem(ACCESS_TOKEN_KEY);
       } finally {
         setLoading(false);
       }
@@ -52,7 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const saveSession = async (token: string, authenticatedUser: User) => {
     setApiToken(token);
-    await AsyncStorage.setItem(TOKEN_KEY, token);
+    await AsyncStorage.setItem(ACCESS_TOKEN_KEY, token);
     setUser(authenticatedUser);
   };
 
@@ -73,7 +76,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     setApiToken(null);
     setUser(null);
-    await AsyncStorage.removeItem(TOKEN_KEY);
+    await AsyncStorage.removeItem(ACCESS_TOKEN_KEY);
   };
 
   return (

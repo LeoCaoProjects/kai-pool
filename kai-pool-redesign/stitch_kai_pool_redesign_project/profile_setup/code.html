@@ -1,0 +1,179 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Kai Pool - Create Profile</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-primary-container": "#98b5a3",
+                      "on-secondary-fixed": "#0b1f18",
+                      "secondary-fixed-dim": "#b5ccc1",
+                      "surface-container-low": "#f7f3ea",
+                      "on-secondary-fixed-variant": "#374b43",
+                      "secondary-fixed": "#d1e8dd",
+                      "error-container": "#ffdad6",
+                      "inverse-primary": "#b0cdbb",
+                      "primary-container": "#2d4739",
+                      "primary-fixed-dim": "#b0cdbb",
+                      "surface-bright": "#fdf9f0",
+                      "on-surface": "#1c1c16",
+                      "surface-variant": "#e6e2d9",
+                      "tertiary": "#4c1e00",
+                      "on-primary": "#ffffff",
+                      "on-tertiary-fixed-variant": "#753403",
+                      "surface-container": "#f2ede4",
+                      "surface-tint": "#496455",
+                      "secondary": "#4e635a",
+                      "surface-dim": "#dedad1",
+                      "on-secondary": "#ffffff",
+                      "background": "#fdf9f0",
+                      "primary": "#173124",
+                      "surface-container-lowest": "#ffffff",
+                      "on-tertiary-container": "#f49760",
+                      "tertiary-container": "#6e2f00",
+                      "tertiary-fixed-dim": "#ffb68e",
+                      "surface-container-highest": "#e6e2d9",
+                      "on-tertiary-fixed": "#331200",
+                      "on-tertiary": "#ffffff",
+                      "on-secondary-container": "#52675e",
+                      "inverse-on-surface": "#f5f0e7",
+                      "outline-variant": "#c2c8c2",
+                      "tertiary-fixed": "#ffdbc9",
+                      "surface-container-high": "#ece8df",
+                      "outline": "#727973",
+                      "on-primary-fixed-variant": "#324c3e",
+                      "on-surface-variant": "#424844",
+                      "surface": "#fdf9f0",
+                      "on-primary-fixed": "#062014",
+                      "primary-fixed": "#ccead6",
+                      "secondary-container": "#cee5da",
+                      "on-error": "#ffffff",
+                      "on-background": "#1c1c16",
+                      "error": "#ba1a1a",
+                      "on-error-container": "#93000a",
+                      "inverse-surface": "#32302a"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "xl": "32px",
+                      "xs": "4px",
+                      "lg": "24px",
+                      "xxl": "48px",
+                      "base": "8px",
+                      "md": "16px",
+                      "margin-desktop": "40px",
+                      "gutter": "16px",
+                      "margin-mobile": "20px",
+                      "sm": "8px"
+              },
+              "fontFamily": {
+                      "title-lg": ["Inter"],
+                      "label-md": ["Inter"],
+                      "display-lg": ["Inter"],
+                      "display-lg-mobile": ["Inter"],
+                      "body-sm": ["Inter"],
+                      "button": ["Inter"],
+                      "headline-md": ["Inter"],
+                      "body-lg": ["Inter"]
+              },
+              "fontSize": {
+                      "title-lg": ["20px", {"lineHeight": "28px", "fontWeight": "500"}],
+                      "label-md": ["12px", {"lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "500"}],
+                      "display-lg": ["32px", {"lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+                      "display-lg-mobile": ["28px", {"lineHeight": "36px", "letterSpacing": "-0.02em", "fontWeight": "600"}],
+                      "body-sm": ["14px", {"lineHeight": "20px", "fontWeight": "400"}],
+                      "button": ["15px", {"lineHeight": "20px", "fontWeight": "600"}],
+                      "headline-md": ["24px", {"lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600"}],
+                      "body-lg": ["16px", {"lineHeight": "24px", "fontWeight": "400"}]
+              }
+            }
+          }
+        }
+    </script>
+<style>
+        body { background-color: theme('colors.background'); color: theme('colors.on-background'); }
+        /* Image upload hover effect */
+        #profile-upload-container:hover #upload-overlay { opacity: 1; }
+        
+        /* Input focus transitions */
+        .form-input-transition { transition: border-color 0.2s ease, box-shadow 0.2s ease; }
+        .form-input-transition:focus { 
+            border-color: theme('colors.primary'); 
+            box-shadow: 0 0 0 1px theme('colors.primary');
+            outline: none;
+        }
+    </style>
+</head>
+<body class="antialiased min-h-screen flex flex-col items-center justify-center p-margin-mobile md:p-margin-desktop bg-surface-container-low">
+<!-- Top Navigation suppressed as this is an onboarding (transactional) screen -->
+<main class="w-full max-w-md mx-auto bg-surface rounded-xl border border-surface-variant p-lg md:p-xl shadow-[0_4px_20px_rgba(0,0,0,0.04)] relative overflow-hidden">
+<!-- Subtle decorative top bar -->
+<div class="absolute top-0 left-0 w-full h-1 bg-primary"></div>
+<!-- Header -->
+<header class="text-center mb-xl">
+<h1 class="font-headline-md text-headline-md text-primary mb-sm font-bold">Kia ora! Let's get started.</h1>
+<p class="font-body-lg text-body-lg text-on-surface-variant">Set up your profile to connect with your local food community.</p>
+</header>
+<form action="#" class="flex flex-col gap-lg" method="POST">
+<!-- Profile Image Upload Area -->
+<div class="flex flex-col items-center justify-center gap-md">
+<div class="relative w-32 h-32 border-2 border-dashed bg-surface-container hover:bg-surface-container-high transition-colors cursor-pointer flex items-center justify-center overflow-hidden group rounded-lg border-primary" id="profile-upload-container">
+<!-- Placeholder Image (Default state) -->
+<div class="absolute inset-0 flex flex-col items-center justify-center z-10 group-hover:text-primary transition-colors text-primary">
+<span class="material-symbols-outlined text-4xl mb-1" style="font-variation-settings: 'FILL' 0;">add_a_photo</span>
+<span class="font-label-md text-label-md">Upload</span>
+</div>
+<!-- Hidden file input -->
+<input accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-30" id="profile-image" name="profile-image" type="file">
+<!-- Overlay on hover (visible only if image is already uploaded, simulated here) -->
+<div class="absolute inset-0 bg-primary/80 flex flex-col items-center justify-center text-on-primary opacity-0 transition-opacity z-20 pointer-events-none" id="upload-overlay">
+<span class="material-symbols-outlined text-3xl">edit</span>
+</div>
+</div>
+<p class="font-body-sm text-body-sm text-on-surface-variant text-center max-w-[250px]">A friendly face helps neighbors trust you.</p>
+</div>
+<!-- Name Input -->
+<div class="flex flex-col gap-xs">
+<label class="font-label-md text-label-md text-on-surface" for="display-name">Preferred Name</label>
+<input class="form-input-transition w-full bg-surface-bright border border-outline-variant rounded-lg px-md py-[12px] font-body-lg text-body-lg text-on-surface placeholder:text-outline-variant" id="display-name" name="display-name" placeholder="E.g. Aroha, Dave, or The Smith Whānau" required="" type="text">
+</div>
+<!-- Bio Textarea -->
+<div class="flex flex-col gap-xs">
+<label class="font-label-md text-label-md text-on-surface flex justify-between" for="bio">
+<span class="">A little about you</span>
+<span class="text-outline-variant font-normal">Optional</span>
+</label>
+<textarea class="form-input-transition w-full bg-surface-bright border border-outline-variant rounded-lg px-md py-md font-body-lg text-body-lg text-on-surface placeholder:text-outline-variant resize-none" id="bio" name="bio" placeholder="I've got a lemon tree that won't quit, and I love baking bread..." rows="3"></textarea>
+<p class="font-label-md text-label-md text-on-surface-variant mt-1">Keep it brief and neighborly.</p>
+</div>
+<!-- Submit Action -->
+<div class="mt-md">
+<button class="w-full bg-primary hover:bg-primary-container text-on-primary font-button text-button py-md px-lg transition-colors duration-200 flex justify-center items-center gap-sm active:scale-[0.98] rounded-lg" type="submit">
+<span class="">Next</span>
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 0;">arrow_forward</span>
+</button>
+</div>
+</form>
+<!-- Progress Indicator -->
+<div class="flex justify-center items-center gap-2 mt-xl">
+<div class="w-2 h-2 rounded-full bg-primary"></div>
+<div class="w-2 h-2 rounded-full bg-outline-variant"></div>
+<div class="w-2 h-2 rounded-full bg-outline-variant"></div>
+</div>
+</main>
+<!-- Bottom Navigation suppressed as this is an onboarding (transactional) screen -->
+
+
+</body></html>

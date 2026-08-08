@@ -1,0 +1,188 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Kai Pool - Login</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-primary-container": "#98b5a3",
+                        "on-secondary-fixed": "#0b1f18",
+                        "secondary-fixed-dim": "#b5ccc1",
+                        "surface-container-low": "#f7f3ea",
+                        "on-secondary-fixed-variant": "#374b43",
+                        "secondary-fixed": "#d1e8dd",
+                        "error-container": "#ffdad6",
+                        "inverse-primary": "#b0cdbb",
+                        "primary-container": "#2d4739",
+                        "primary-fixed-dim": "#b0cdbb",
+                        "surface-bright": "#fdf9f0",
+                        "on-surface": "#1c1c16",
+                        "surface-variant": "#e6e2d9",
+                        "tertiary": "#4c1e00",
+                        "on-primary": "#ffffff",
+                        "on-tertiary-fixed-variant": "#753403",
+                        "surface-container": "#f2ede4",
+                        "surface-tint": "#496455",
+                        "secondary": "#4e635a",
+                        "surface-dim": "#dedad1",
+                        "on-secondary": "#ffffff",
+                        "background": "#fdf9f0",
+                        "primary": "#173124",
+                        "surface-container-lowest": "#ffffff",
+                        "on-tertiary-container": "#f49760",
+                        "tertiary-container": "#6e2f00",
+                        "tertiary-fixed-dim": "#ffb68e",
+                        "surface-container-highest": "#e6e2d9",
+                        "on-tertiary-fixed": "#331200",
+                        "on-tertiary": "#ffffff",
+                        "on-secondary-container": "#52675e",
+                        "inverse-on-surface": "#f5f0e7",
+                        "outline-variant": "#c2c8c2",
+                        "tertiary-fixed": "#ffdbc9",
+                        "surface-container-high": "#ece8df",
+                        "outline": "#727973",
+                        "on-primary-fixed-variant": "#324c3e",
+                        "on-surface-variant": "#424844",
+                        "surface": "#fdf9f0",
+                        "on-primary-fixed": "#062014",
+                        "primary-fixed": "#ccead6",
+                        "secondary-container": "#cee5da",
+                        "on-error": "#ffffff",
+                        "on-background": "#1c1c16",
+                        "error": "#ba1a1a",
+                        "on-error-container": "#93000a",
+                        "inverse-surface": "#32302a"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "xl": "32px",
+                        "xs": "4px",
+                        "lg": "24px",
+                        "xxl": "48px",
+                        "base": "8px",
+                        "md": "16px",
+                        "margin-desktop": "40px",
+                        "gutter": "16px",
+                        "margin-mobile": "20px",
+                        "sm": "8px"
+                    },
+                    "fontFamily": {
+                        "title-lg": ["Inter"],
+                        "label-md": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "display-lg-mobile": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "button": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "body-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "title-lg": ["20px", { "lineHeight": "28px", "fontWeight": "500" }],
+                        "label-md": ["12px", { "lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "500" }],
+                        "display-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+                        "display-lg-mobile": ["28px", { "lineHeight": "36px", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "button": ["15px", { "lineHeight": "20px", "fontWeight": "600" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-surface text-on-surface antialiased min-h-screen flex flex-col font-body-lg">
+<!-- Top App Bar - Minimal for Login -->
+<header class="flex justify-between items-center h-16 px-margin-mobile w-full z-50 bg-surface border-b border-outline-variant transition-colors duration-200">
+<button aria-label="Go back" class="flex items-center justify-center p-2 rounded-full hover:bg-surface-container transition-colors duration-200">
+<span class="material-symbols-outlined text-primary" data-icon="arrow_back">arrow_back</span>
+</button>
+<h1 class="font-title-lg text-title-lg font-bold text-primary">Kai Pool</h1>
+<div class="w-10"></div> <!-- Spacer for centering -->
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-grow flex flex-col px-margin-mobile pt-xl pb-xxl max-w-md mx-auto w-full relative z-10">
+<div class="mb-xl text-center md:text-left mt-lg">
+<!-- Pure typography focus, no heavy imagery needed here per Community Minimalism -->
+<h2 class="font-headline-md text-headline-md text-primary mb-sm font-bold">Log In</h2>
+<p class="font-body-lg text-body-lg text-on-surface-variant">Welcome back to your local food pool.</p>
+</div>
+<form class="flex flex-col gap-lg w-full">
+<!-- Email Input -->
+<div class="flex flex-col gap-base">
+<label class="font-label-md text-label-md text-on-surface-variant" for="email">Email</label>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-md top-1/2 -translate-y-1/2 text-on-surface-variant z-10" data-icon="mail">mail</span>
+<input class="w-full h-12 pl-12 pr-md bg-surface-container-low border border-outline-variant font-body-lg text-body-lg text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200 rounded-lg" id="email" name="email" placeholder="neighbor@example.com" required="" type="email">
+</div>
+</div>
+<!-- Password Input -->
+<div class="flex flex-col gap-base">
+<div class="flex justify-between items-center">
+<label class="font-label-md text-label-md text-on-surface-variant" for="password">Password</label>
+<a class="font-label-md text-label-md text-primary hover:underline underline-offset-4" href="#">Forgot password?</a>
+</div>
+<div class="relative">
+<span class="material-symbols-outlined absolute left-md top-1/2 -translate-y-1/2 text-on-surface-variant z-10" data-icon="lock">lock</span>
+<input class="w-full h-12 pl-12 pr-12 bg-surface-container-low border border-outline-variant font-body-lg text-body-lg text-on-surface placeholder:text-on-surface-variant focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all duration-200 rounded-lg" id="password" name="password" placeholder="••••••••" required="" type="password">
+<button aria-label="Toggle password visibility" class="absolute right-md top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-primary transition-colors focus:outline-none" type="button">
+<span class="material-symbols-outlined" data-icon="visibility">visibility</span>
+</button>
+</div>
+</div>
+<!-- Submit Button -->
+<button class="mt-md w-full h-14 bg-primary text-on-primary rounded-lg font-button text-button flex justify-center items-center gap-sm hover:bg-primary-container hover:text-on-primary-container active:scale-[0.98] transition-all duration-200 shadow-sm" type="submit">
+                Log in
+                <span class="material-symbols-outlined" data-icon="arrow_forward">arrow_forward</span>
+</button>
+<div class="mt-lg text-center">
+<p class="font-body-sm text-body-sm text-on-surface-variant">
+                    Don't have an account? 
+                    <a class="font-button text-button text-primary hover:underline underline-offset-4 ml-1" href="#">Sign up</a>
+</p>
+</div>
+</form>
+<!-- Subtle decorative element grounding the design -->
+<div class="mt-auto pt-xxl pb-lg flex justify-center opacity-40">
+<span class="material-symbols-outlined text-primary text-4xl" data-icon="eco" data-weight="fill">eco</span>
+</div>
+</main>
+<!-- Navigation Shell (BottomNavBar) is suppressed here because this is a linear/transactional intent screen (Login) -->
+<script>
+        // Simple password toggle logic
+        document.addEventListener('DOMContentLoaded', () => {
+            const toggleBtn = document.querySelector('button[aria-label="Toggle password visibility"]');
+            const passwordInput = document.getElementById('password');
+            const iconSpan = toggleBtn.querySelector('.material-symbols-outlined');
+
+            if (toggleBtn && passwordInput && iconSpan) {
+                toggleBtn.addEventListener('click', () => {
+                    const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+                    passwordInput.setAttribute('type', type);
+                    
+                    if (type === 'text') {
+                        iconSpan.textContent = 'visibility_off';
+                        iconSpan.setAttribute('data-icon', 'visibility_off');
+                    } else {
+                        iconSpan.textContent = 'visibility';
+                        iconSpan.setAttribute('data-icon', 'visibility');
+                    }
+                });
+            }
+        });
+    </script>
+
+
+</body></html>

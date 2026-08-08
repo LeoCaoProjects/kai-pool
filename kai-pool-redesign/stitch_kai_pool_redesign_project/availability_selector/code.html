@@ -1,0 +1,339 @@
+<!DOCTYPE html><html lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Availability Selector - Kai Pool</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com" rel="preconnect">
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "on-primary-container": "#98b5a3",
+                      "on-secondary-fixed": "#0b1f18",
+                      "secondary-fixed-dim": "#b5ccc1",
+                      "surface-container-low": "#f7f3ea",
+                      "on-secondary-fixed-variant": "#374b43",
+                      "secondary-fixed": "#d1e8dd",
+                      "error-container": "#ffdad6",
+                      "inverse-primary": "#b0cdbb",
+                      "primary-container": "#2d4739",
+                      "primary-fixed-dim": "#b0cdbb",
+                      "surface-bright": "#fdf9f0",
+                      "on-surface": "#1c1c16",
+                      "surface-variant": "#e6e2d9",
+                      "tertiary": "#4c1e00",
+                      "on-primary": "#ffffff",
+                      "on-tertiary-fixed-variant": "#753403",
+                      "surface-container": "#f2ede4",
+                      "surface-tint": "#496455",
+                      "secondary": "#4e635a",
+                      "surface-dim": "#dedad1",
+                      "on-secondary": "#ffffff",
+                      "background": "#fdf9f0",
+                      "primary": "#173124",
+                      "surface-container-lowest": "#ffffff",
+                      "on-tertiary-container": "#f49760",
+                      "tertiary-container": "#6e2f00",
+                      "tertiary-fixed-dim": "#ffb68e",
+                      "surface-container-highest": "#e6e2d9",
+                      "on-tertiary-fixed": "#331200",
+                      "on-tertiary": "#ffffff",
+                      "on-secondary-container": "#52675e",
+                      "inverse-on-surface": "#f5f0e7",
+                      "outline-variant": "#c2c8c2",
+                      "tertiary-fixed": "#ffdbc9",
+                      "surface-container-high": "#ece8df",
+                      "outline": "#727973",
+                      "on-primary-fixed-variant": "#324c3e",
+                      "on-surface-variant": "#424844",
+                      "surface": "#fdf9f0",
+                      "on-primary-fixed": "#062014",
+                      "primary-fixed": "#ccead6",
+                      "secondary-container": "#cee5da",
+                      "on-error": "#ffffff",
+                      "on-background": "#1c1c16",
+                      "error": "#ba1a1a",
+                      "on-error-container": "#93000a",
+                      "inverse-surface": "#32302a"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "xl": "32px",
+                      "xs": "4px",
+                      "lg": "24px",
+                      "xxl": "48px",
+                      "base": "8px",
+                      "md": "16px",
+                      "margin-desktop": "40px",
+                      "gutter": "16px",
+                      "margin-mobile": "20px",
+                      "sm": "8px"
+              },
+              "fontFamily": {
+                      "title-lg": [
+                              "Inter"
+                      ],
+                      "label-md": [
+                              "Inter"
+                      ],
+                      "display-lg": [
+                              "Inter"
+                      ],
+                      "display-lg-mobile": [
+                              "Inter"
+                      ],
+                      "body-sm": [
+                              "Inter"
+                      ],
+                      "button": [
+                              "Inter"
+                      ],
+                      "headline-md": [
+                              "Inter"
+                      ],
+                      "body-lg": [
+                              "Inter"
+                      ]
+              },
+              "fontSize": {
+                      "title-lg": [
+                              "20px",
+                              {
+                                      "lineHeight": "28px",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "label-md": [
+                              "12px",
+                              {
+                                      "lineHeight": "16px",
+                                      "letterSpacing": "0.02em",
+                                      "fontWeight": "500"
+                              }
+                      ],
+                      "display-lg": [
+                              "32px",
+                              {
+                                      "lineHeight": "40px",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "display-lg-mobile": [
+                              "28px",
+                              {
+                                      "lineHeight": "36px",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-sm": [
+                              "14px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "button": [
+                              "15px",
+                              {
+                                      "lineHeight": "20px",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "headline-md": [
+                              "24px",
+                              {
+                                      "lineHeight": "32px",
+                                      "letterSpacing": "-0.01em",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-lg": [
+                              "16px",
+                              {
+                                      "lineHeight": "24px",
+                                      "fontWeight": "400"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+    </script>
+<style>
+        /* Custom Radio Button Styles */
+        input[type="radio"] {
+            -webkit-appearance: none;
+            appearance: none;
+            background-color: transparent;
+            margin: 0;
+            font: inherit;
+            color: currentColor;
+            width: 1.15em;
+            height: 1.15em;
+            border: 2px solid #727973; /* outline */
+            border-radius: 50%;
+            display: grid;
+            place-content: center;
+        }
+
+        input[type="radio"]::before {
+            content: "";
+            width: 0.65em;
+            height: 0.65em;
+            border-radius: 50%;
+            transform: scale(0);
+            transition: 120ms transform ease-in-out;
+            box-shadow: inset 1em 1em #173124; /* primary */
+        }
+
+        input[type="radio"]:checked::before {
+            transform: scale(1);
+        }
+
+        input[type="radio"]:checked {
+            border-color: #173124; /* primary */
+        }
+        
+        /* Focus state for accessibility */
+        input[type="radio"]:focus-visible {
+             outline: max(2px, 0.15em) solid #173124;
+             outline-offset: max(2px, 0.15em);
+        }
+
+        .option-card {
+            transition: all 0.2s ease-in-out;
+        }
+        .option-card.selected {
+            border-color: #173124;
+            background-color: #ccead6; /* primary-fixed */
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background min-h-screen flex flex-col items-center justify-center p-4">
+<!-- Modal Container -->
+<div class="rounded-xl shadow-[0px_4px_20px_rgba(0,0,0,0.04)] w-full max-w-md border border-surface-variant overflow-hidden flex flex-col bg-surface-container-low">
+<!-- Header -->
+<div class="px-lg pt-lg pb-md flex justify-between items-center border-b border-surface-variant">
+<h1 class="font-headline-md text-headline-md text-on-surface font-bold">Share Availability</h1>
+<button aria-label="Close" class="p-2 rounded-full hover:bg-surface-container transition-colors duration-200 text-on-surface-variant">
+<span class="material-symbols-outlined">arrow_back</span>
+</button>
+</div>
+<!-- Content -->
+<div class="p-lg flex-1 overflow-y-auto">
+<p class="font-body-lg text-body-lg text-on-surface-variant mb-lg">
+                How would you like to share this food with the community?
+            </p>
+<div class="space-y-md">
+<!-- Option 1: Private -->
+<label class="option-card flex items-start gap-md p-md rounded-lg border border-surface-variant cursor-pointer hover:bg-surface-container-low selected bg-primary-fixed border-primary" onkeypress="handleKeyPress(event, this)" tabindex="0">
+<div class="mt-1">
+<input class="peer" name="availability" onclick="updateSelection(this)" type="radio" value="private">
+</div>
+<div class="flex-1">
+<h3 class="font-title-lg text-title-lg text-on-surface mb-xs flex items-center gap-2">
+<span class="material-symbols-outlined text-[20px]" data-weight="fill">lock</span>
+                            Private
+                        </h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">
+                            Keep this hidden for now. Only you can see and manage this item.
+                        </p>
+</div>
+</label>
+<!-- Option 2: Cook Together -->
+<label class="option-card flex items-start gap-md p-md rounded-lg border border-surface-variant cursor-pointer hover:bg-surface-container-low" onkeypress="handleKeyPress(event, this)" tabindex="0">
+<div class="mt-1">
+<input class="peer" name="availability" onclick="updateSelection(this)" type="radio" value="cook_together">
+</div>
+<div class="flex-1">
+<h3 class="font-title-lg text-title-lg text-on-surface mb-xs flex items-center gap-2">
+<span class="material-symbols-outlined text-[20px]" data-weight="fill">group</span>
+                            Cook Together
+                        </h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">
+                            Invite neighbors to join you in preparing a meal using this item.
+                        </p>
+</div>
+</label>
+<!-- Option 3: Giveaway -->
+<label class="option-card flex items-start gap-md p-md rounded-lg border border-surface-variant cursor-pointer hover:bg-surface-container-low" onkeypress="handleKeyPress(event, this)" tabindex="0">
+<div class="mt-1">
+<input class="peer" name="availability" onclick="updateSelection(this)" type="radio" value="giveaway">
+</div>
+<div class="flex-1">
+<h3 class="font-title-lg text-title-lg text-on-surface mb-xs flex items-center gap-2">
+<span class="material-symbols-outlined text-[20px]" data-weight="fill">redeem</span>
+                            Giveaway
+                        </h3>
+<p class="font-body-sm text-body-sm text-on-surface-variant">
+                            Offer this item for free to anyone in the community who needs it.
+                        </p>
+</div>
+</label>
+</div>
+</div>
+<!-- Footer -->
+<div class="p-lg border-t border-surface-variant bg-surface-container-lowest">
+<button class="w-full bg-primary text-on-primary font-button text-button py-3 px-4 hover:opacity-90 transition-opacity flex justify-center items-center rounded-lg">
+                Confirm Selection
+            </button>
+</div>
+</div>
+<script>
+        function updateSelection(radioInput) {
+            // Remove selected class from all cards
+            document.querySelectorAll('.option-card').forEach(card => {
+                card.classList.remove('selected');
+                card.classList.remove('bg-primary-fixed');
+                card.classList.remove('border-primary');
+            });
+
+            // Add selected class to the parent card of the checked radio
+            if (radioInput.checked) {
+                const parentCard = radioInput.closest('.option-card');
+                parentCard.classList.add('selected');
+                parentCard.classList.add('bg-primary-fixed');
+                parentCard.classList.add('border-primary');
+            }
+        }
+
+        // Allow selection via keyboard (Enter or Space) on the label
+        function handleKeyPress(e, labelElement) {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                const radio = labelElement.querySelector('input[type="radio"]');
+                radio.checked = true;
+                updateSelection(radio);
+            }
+        }
+        
+        // Initialize state (select first option by default for demonstration)
+        document.addEventListener('DOMContentLoaded', () => {
+           const firstOption = document.querySelector('input[type="radio"]');
+           if(firstOption) {
+               firstOption.checked = true;
+               updateSelection(firstOption);
+           }
+        });
+    </script>
+
+
+</body></html>

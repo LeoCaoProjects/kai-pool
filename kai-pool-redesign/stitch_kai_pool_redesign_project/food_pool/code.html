@@ -1,0 +1,184 @@
+<!DOCTYPE html><html class="light" lang="en"><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Kai Pool</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "on-primary-container": "#98b5a3",
+                        "on-secondary-fixed": "#0b1f18",
+                        "secondary-fixed-dim": "#b5ccc1",
+                        "surface-container-low": "#f7f3ea",
+                        "on-secondary-fixed-variant": "#374b43",
+                        "secondary-fixed": "#d1e8dd",
+                        "error-container": "#ffdad6",
+                        "inverse-primary": "#b0cdbb",
+                        "primary-container": "#2d4739",
+                        "primary-fixed-dim": "#b0cdbb",
+                        "surface-bright": "#fdf9f0",
+                        "on-surface": "#1c1c16",
+                        "surface-variant": "#e6e2d9",
+                        "tertiary": "#4c1e00",
+                        "on-primary": "#ffffff",
+                        "on-tertiary-fixed-variant": "#753403",
+                        "surface-container": "#f2ede4",
+                        "surface-tint": "#496455",
+                        "secondary": "#4e635a",
+                        "surface-dim": "#dedad1",
+                        "on-secondary": "#ffffff",
+                        "background": "#fdf9f0",
+                        "primary": "#173124",
+                        "surface-container-lowest": "#ffffff",
+                        "on-tertiary-container": "#f49760",
+                        "tertiary-container": "#6e2f00",
+                        "tertiary-fixed-dim": "#ffb68e",
+                        "surface-container-highest": "#e6e2d9",
+                        "on-tertiary-fixed": "#331200",
+                        "on-tertiary": "#ffffff",
+                        "on-secondary-container": "#52675e",
+                        "inverse-on-surface": "#f5f0e7",
+                        "outline-variant": "#c2c8c2",
+                        "tertiary-fixed": "#ffdbc9",
+                        "surface-container-high": "#ece8df",
+                        "outline": "#727973",
+                        "on-primary-fixed-variant": "#324c3e",
+                        "on-surface-variant": "#424844",
+                        "surface": "#fdf9f0",
+                        "on-primary-fixed": "#062014",
+                        "primary-fixed": "#ccead6",
+                        "secondary-container": "#cee5da",
+                        "on-error": "#ffffff",
+                        "on-background": "#1c1c16",
+                        "error": "#ba1a1a",
+                        "on-error-container": "#93000a",
+                        "inverse-surface": "#32302a"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "xl": "32px",
+                        "xs": "4px",
+                        "lg": "24px",
+                        "xxl": "48px",
+                        "base": "8px",
+                        "md": "16px",
+                        "margin-desktop": "40px",
+                        "gutter": "16px",
+                        "margin-mobile": "20px",
+                        "sm": "8px"
+                    },
+                    "fontFamily": {
+                        "title-lg": ["Inter"],
+                        "label-md": ["Inter"],
+                        "display-lg": ["Inter"],
+                        "display-lg-mobile": ["Inter"],
+                        "body-sm": ["Inter"],
+                        "button": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "body-lg": ["Inter"]
+                    },
+                    "fontSize": {
+                        "title-lg": ["20px", { "lineHeight": "28px", "fontWeight": "500" }],
+                        "label-md": ["12px", { "lineHeight": "16px", "letterSpacing": "0.02em", "fontWeight": "500" }],
+                        "display-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+                        "display-lg-mobile": ["28px", { "lineHeight": "36px", "letterSpacing": "-0.02em", "fontWeight": "600" }],
+                        "body-sm": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "button": ["15px", { "lineHeight": "20px", "fontWeight": "600" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-background text-on-background antialiased min-h-screen pb-[100px]">
+<!-- TopAppBar from JSON -->
+<header class="fixed top-0 w-full z-50 bg-surface dark:bg-surface-dim flex justify-between items-center h-16 px-margin-mobile border-b border-outline-variant dark:border-outline">
+<div class="flex items-center gap-md">
+
+<h1 class="font-title-lg text-title-lg font-bold text-primary dark:text-primary-fixed">Kai Pool</h1>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="pt-[88px] px-margin-mobile flex flex-col gap-lg max-w-[768px] mx-auto w-full">
+<header class="flex flex-col gap-xs">
+<h2 class="font-headline-md text-headline-md text-on-surface">Local Ingredients</h2>
+<p class="font-body-sm text-body-sm text-on-surface-variant">Available for cooking together, sharing, or claiming.</p>
+</header>
+<!-- Ingredient Cards List -->
+<div class="flex flex-col gap-md">
+<!-- Card 1: Kūmara -->
+<article class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden flex flex-col">
+<div class="w-full aspect-[4/3] bg-surface-container relative">
+<img class="w-full h-full object-cover" data-alt="A rustic, high-quality photograph of fresh, earth-covered New Zealand Kūmara (sweet potatoes) resting on a clean, light-toned wooden table. The lighting is soft, natural, and diffused, creating a calm and inviting organic modern aesthetic. The color palette emphasizes warm earthy oranges, browns, and subtle off-whites, perfectly fitting a community food sharing app's light-mode design. The composition is minimal and focused entirely on the fresh produce." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCRaf28W0UXqUxbzWG0QqyTwr6xWC3PSVAtotC_S6NL64j81QTuLLeFW4WXEWt0TjXSd7imBY-zuBMQG-Xd7gwmPmJnuhHpkHGmgDzFlhu6ujBRhgewpy_RfF7oDlMQQgjuvzsenC7UV1NV0jU7Rr4E7xv825eKQph2_pOF8U9Lf0Jpzr8ZnEGGL9QTnzzE5HvO7hScQ8atuuVcyg1KEB8hQi73uJdPenkQngKmgoz8NVhH4c5hLXQ">
+</div>
+<div class="p-md flex flex-col gap-sm"><div class="flex justify-between items-start gap-md"><h3 class="font-title-lg text-title-lg font-bold text-on-surface">Kūmara</h3><span class="px-2 py-1 rounded-full font-label-md text-label-md bg-secondary-container text-primary border border-secondary-fixed-dim/30">Cook Together</span></div><div class="flex items-center gap-xs font-body-sm text-body-sm text-on-surface-variant"><span class="material-symbols-outlined text-[16px] text-secondary">scale</span><span class="">2kg</span></div></div>
+</article>
+<!-- Card 2: Silverbeet -->
+<article class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden flex flex-col">
+<div class="w-full aspect-[4/3] bg-surface-container relative">
+<img class="w-full h-full object-cover" data-alt="A bright, high-quality photograph of a freshly picked bunch of vibrant green silverbeet (Swiss chard) with crisp white stalks, laid on a pristine, warm white surface. The lighting is natural and airy, highlighting the intricate textures of the leaves. The aesthetic is clean, minimalist, and organic, conveying freshness and healthy community sharing. The surrounding space is uncluttered, emphasizing the vivid greens against neutral tones." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDAm1xi9ks6BbkGcPShXL4gadt1mMoIiJl_lmN8BVeOHtYEwM6zO3ZJWex3LLDDEKHqDwDKFXjPw6Au1eZ6hWWesKdxf6E3sw7O3ipeH0BE0bD029XgZqLoKZ_4cZ26KnIqccnawjY9V_oG5QZIwIuRxXcYjAAXyul1CM9F5UbY63PRUZgCzlI8wsCE0lLo9Cd85oEPDtXhcS3thzFP2pRDP6E5QK4dwDzscqVOG3v4qtVCSCJUgWM">
+</div>
+<div class="p-md flex flex-col gap-sm"><div class="flex justify-between items-start gap-md"><h3 class="font-title-lg text-title-lg font-bold text-on-surface">Silverbeet</h3><span class="px-2 py-1 rounded-full font-label-md text-label-md bg-secondary-container text-primary border border-secondary-fixed-dim/30">Giveaway</span></div><div class="flex items-center gap-xs font-body-sm text-body-sm text-on-surface-variant"><span class="material-symbols-outlined text-[16px] text-secondary">inventory_2</span><span class="">1 bunch</span></div></div>
+</article>
+<!-- Card 3: Taro -->
+<article class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden flex flex-col">
+<div class="w-full aspect-[4/3] bg-surface-container relative">
+<img class="w-full h-full object-cover" data-alt="A high-quality, organic modern photograph featuring three large, whole raw taro roots with their distinct textured, bark-like skin. They are arranged simply on a minimalist light-grey stone countertop. Soft, directional natural light casts gentle shadows, enhancing the grounded, rustic feel of the produce. The image uses a restrained color palette of deep browns, soft greys, and warm highlights, reflecting a calm, neighborly food community vibe." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCZvJdYVfGScgVDmq057HTQoOueJUKDxwE-WjCSZIk42ZH_qW9C9oUOYmu3PGfVu6qoBGFcygv_-hoqpkaEBy0dueJhgrlHmae_LC3yT0jnM5fcOZKWX44E-mLXpNS_gm_6Qx4bvHTFcF4nhEgYw6zzRAd2PTICC4palhfNvnVQc_9SrrpH-95uSLLz6AmdfPSwb2pAUIRJo-lmXEO6vNm5QXkKddP8yCTNdQQD5tOw6c9VDm-2VVk">
+</div>
+<div class="p-md flex flex-col gap-sm"><div class="flex justify-between items-start gap-md"><h3 class="font-title-lg text-title-lg font-bold text-on-surface">Taro</h3><span class="px-2 py-1 rounded-full font-label-md text-label-md bg-secondary-container text-primary border border-secondary-fixed-dim/30">Private</span></div><div class="flex items-center gap-xs font-body-sm text-body-sm text-on-surface-variant"><span class="material-symbols-outlined text-[16px] text-secondary">inventory_2</span><span class="">3 large</span></div></div>
+</article>
+<!-- Card 4: Eggs -->
+<article class="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden flex flex-col">
+<div class="w-full aspect-[4/3] bg-surface-container relative">
+<img class="w-full h-full object-cover" data-alt="A beautifully minimal, high-quality photograph of a cardboard carton containing six fresh, mixed-color farm eggs (brown and speckled) on a soft, warm beige background. The overhead lighting is soft and flattering, creating subtle tonal depth without harsh shadows. The image perfectly captures a rustic yet modern aesthetic, evoking feelings of local farming, community trust, and organic simplicity. The composition is clean and beautifully centered." src="https://lh3.googleusercontent.com/aida-public/AB6AXuB_iRVGjsEaByl2bn4SGr5Dbq5glDP6DxcMpRuNeY90H-3GKcL9JaVFeZyVarsN_9tsCjEZN5lGWT5O76rssga1YXn3KcEtD0OHg12qumhyT84IoxkMUTVTk4uh93hdJtXUB2ek5dD7MeBtSt_cAXWI8H1B10cRpfLNgY92Z4fwYaMszlJmhmrI1Y_RDpbNoYmjobNyXdJqBey66sXfisfOMIyfZfhNM9z6BM6-fO-mkSdJDCXeSuE">
+</div>
+<div class="p-md flex flex-col gap-sm"><div class="flex justify-between items-start gap-md"><h3 class="font-title-lg text-title-lg font-bold text-on-surface">Eggs</h3><span class="px-2 py-1 rounded-full font-label-md text-label-md bg-secondary-container text-primary border border-secondary-fixed-dim/30">Cook Together</span></div><div class="flex items-center gap-xs font-body-sm text-body-sm text-on-surface-variant"><span class="material-symbols-outlined text-[16px] text-secondary">inventory_2</span><span class="">6 pack</span></div></div>
+</article>
+</div>
+</main>
+<!-- Contextual FAB for adding to the Food Pool -->
+<button class="fixed bottom-[88px] right-margin-mobile md:right-margin-desktop bg-primary text-on-primary w-14 h-14 rounded-xl flex items-center justify-center shadow-md z-40 transition-transform active:scale-95 hover:bg-primary-container hover:text-on-primary-container">
+<span class="material-symbols-outlined text-[24px]" data-icon="add">add</span>
+</button>
+<!-- BottomNavBar from JSON -->
+<nav class="fixed bottom-0 left-0 w-full h-16 flex justify-around items-center px-4 bg-surface dark:bg-surface-dim z-50 border-t border-outline-variant dark:border-outline md:hidden"><!-- Active Tab: Food Pool -->
+<button class="flex flex-col items-center justify-center text-primary-container active:scale-95 transition-transform duration-150 flex-1 hover:bg-surface-container-low h-full relative after:content-[''] after:absolute after:bottom-1 after:w-1 after:h-1 after:bg-primary-container after:rounded-full">
+  <span class="material-symbols-outlined mb-1" style="font-variation-settings: 'FILL' 1;">home_storage</span>
+  <span class="font-label-md text-label-md">Food Pool</span>
+</button>
+<!-- Inactive Tabs -->
+<button class="flex flex-col items-center justify-center text-on-surface-variant active:scale-95 transition-transform duration-150 flex-1 hover:bg-surface-container-low h-full">
+  <span class="material-symbols-outlined mb-1">explore</span>
+  <span class="font-label-md text-label-md">Discover</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant active:scale-95 transition-transform duration-150 flex-1 hover:bg-surface-container-low h-full">
+  <span class="material-symbols-outlined mb-1">qr_code_scanner</span>
+  <span class="font-label-md text-label-md">Scan</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant active:scale-95 transition-transform duration-150 flex-1 hover:bg-surface-container-low h-full">
+  <span class="material-symbols-outlined mb-1">handshake</span>
+  <span class="font-label-md text-label-md">Connections</span>
+</button>
+<button class="flex flex-col items-center justify-center text-on-surface-variant active:scale-95 transition-transform duration-150 flex-1 hover:bg-surface-container-low h-full">
+  <span class="material-symbols-outlined mb-1">person</span>
+  <span class="font-label-md text-label-md">Profile</span>
+</button></nav>
+
+
+</body></html>

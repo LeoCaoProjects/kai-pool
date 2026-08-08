@@ -3,9 +3,10 @@ import { router } from "expo-router";
 import { useState } from "react";
 import {
   ActivityIndicator,
-  Button,
   Image,
+  Pressable,
   ScrollView,
+  StyleSheet,
   Text,
   TextInput,
   View,
@@ -14,6 +15,7 @@ import {
 import { ApiError } from "../../api/client";
 import { createFood } from "../../api/foods";
 import { scanFood } from "../../api/scan";
+import { colors, sharedStyles } from "../../ui/theme";
 
 type DraftFood = {
   id: number;
@@ -178,63 +180,59 @@ export default function ScanScreen() {
   };
 
   return (
-    <ScrollView contentContainerStyle={{ gap: 12, padding: 16 }}>
-      <Text style={{ fontSize: 24 }}>Scan food</Text>
-      <Text>Take a clear photo of the food you want to add.</Text>
+    <ScrollView style={sharedStyles.screen} contentContainerStyle={styles.content}>
+      <Text style={sharedStyles.display}>Scan food</Text>
+      <Text style={sharedStyles.body}>Take a clear photo and we’ll identify ingredients for you to review.</Text>
 
       <View style={{ flexDirection: "row", gap: 8 }}>
-        <View style={{ flex: 1 }}>
-          <Button title="Take photo" onPress={() => void takePhoto()} disabled={analysing || saving} />
-        </View>
-        <View style={{ flex: 1 }}>
-          <Button title="Choose photo" onPress={() => void choosePhoto()} disabled={analysing || saving} />
-        </View>
+        <Action title="Take photo" onPress={() => void takePhoto()} disabled={analysing || saving} />
+        <Action title="Choose photo" onPress={() => void choosePhoto()} disabled={analysing || saving} secondary />
       </View>
 
       {image ? (
         <Image
           source={{ uri: image.uri }}
-          style={{ width: "100%", height: 240, borderRadius: 8 }}
+          style={styles.image}
           resizeMode="cover"
         />
       ) : null}
 
-      <Button
+      <Action
         title={analysing ? "Analysing..." : "Analyse photo"}
         onPress={() => void analyse()}
         disabled={!image || analysing || saving}
       />
       {analysing ? <ActivityIndicator /> : null}
-      {error ? <Text style={{ color: "#b00020" }}>{error}</Text> : null}
-      {message ? <Text style={{ color: saved ? "#16703a" : undefined }}>{message}</Text> : null}
+      {error ? <View style={sharedStyles.errorBox}><Text style={sharedStyles.errorText}>{error}</Text></View> : null}
+      {message ? <Text style={[styles.message, saved && styles.success]}>{message}</Text> : null}
 
       {analysed && !saved ? (
         <View style={{ gap: 12 }}>
-          <Text style={{ fontSize: 20 }}>Review food</Text>
+          <Text style={sharedStyles.headline}>Review food</Text>
           {items.map((item, index) => (
-            <View key={item.id} style={{ borderWidth: 1, borderRadius: 8, gap: 8, padding: 12 }}>
-              <Text>Item {index + 1}</Text>
+            <View key={item.id} style={styles.itemCard}>
+              <Text style={styles.itemLabel}>ITEM {index + 1}</Text>
               <TextInput
                 value={item.name}
                 onChangeText={(value) => updateItem(item.id, "name", value)}
                 placeholder="Food name"
-                style={{ borderWidth: 1, padding: 10 }}
+                style={sharedStyles.input}
               />
               <TextInput
                 value={item.quantity}
                 onChangeText={(value) => updateItem(item.id, "quantity", value)}
                 placeholder="Quantity"
-                style={{ borderWidth: 1, padding: 10 }}
+                style={sharedStyles.input}
               />
               {item.confidence !== null ? (
                 <Text>Confidence: {Math.round(item.confidence * 100)}%</Text>
               ) : null}
-              <Button title="Remove" onPress={() => removeItem(item.id)} disabled={saving} />
+              <Pressable onPress={() => removeItem(item.id)} disabled={saving}><Text style={styles.remove}>Remove item</Text></Pressable>
             </View>
           ))}
 
-          <Button title="Add item" onPress={addItem} disabled={saving} />
-          <Button
+          <Action title="Add another item" onPress={addItem} disabled={saving} secondary />
+          <Action
             title={saving ? "Saving..." : "Confirm and save"}
             onPress={() => void saveItems()}
             disabled={saving || saved}
@@ -243,8 +241,14 @@ export default function ScanScreen() {
         </View>
       ) : null}
 
-      {saved ? <Button title="View food pool" onPress={() => router.push("/food-pool")} /> : null}
-      {(image || analysed) ? <Button title="Scan another" onPress={reset} disabled={analysing || saving} /> : null}
+      {saved ? <Action title="View Food Pool" onPress={() => router.push("/(tabs)/food-pool")} /> : null}
+      {(image || analysed) ? <Action title="Scan another" onPress={reset} disabled={analysing || saving} secondary /> : null}
     </ScrollView>
   );
 }
+
+function Action({ title, onPress, disabled, secondary = false }: { title: string; onPress: () => void; disabled?: boolean; secondary?: boolean }) {
+  return <Pressable disabled={disabled} onPress={onPress} style={[secondary ? sharedStyles.secondaryButton : sharedStyles.primaryButton, styles.action, disabled && styles.disabled]}><Text style={secondary ? sharedStyles.secondaryButtonText : sharedStyles.primaryButtonText}>{title}</Text></Pressable>;
+}
+
+const styles = StyleSheet.create({ content: { gap: 16, padding: 20, paddingBottom: 48 }, action: { flex: 1 }, disabled: { opacity: 0.55 }, image: { borderRadius: 16, height: 260, width: "100%" }, itemCard: { backgroundColor: colors.surface, borderColor: colors.surfaceHigh, borderRadius: 16, borderWidth: 1, gap: 10, padding: 16 }, itemLabel: { color: colors.secondary, fontSize: 11, fontWeight: "700", letterSpacing: 1 }, remove: { color: colors.error, fontSize: 14, fontWeight: "600", paddingVertical: 6, textAlign: "center" }, message: { color: colors.textMuted, lineHeight: 20 }, success: { color: colors.success } });

@@ -26,7 +26,8 @@
         {
           "locationWhenInUsePermission": "Allow Kai Pool to use your approximate location for local matches."
         }
-      ]
+      ],
+      "expo-font"
     ]
   }
 }
