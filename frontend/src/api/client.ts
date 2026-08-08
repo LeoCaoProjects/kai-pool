@@ -41,12 +41,14 @@ export const apiRequest = async <T>(
     headers.set("Authorization", `Bearer ${accessToken}`);
   }
 
+  const requestToken = accessToken;
+
   const response = await fetch(buildApiUrl(path), {
     ...options,
     headers,
   });
 
-  if (response.status === 401) {
+  if (response.status === 401 && requestToken && accessToken === requestToken) {
     accessToken = null;
     await AsyncStorage.removeItem(ACCESS_TOKEN_KEY);
     unauthorizedHandler?.();

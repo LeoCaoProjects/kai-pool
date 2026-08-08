@@ -1,6 +1,7 @@
 package nz.ac.aut.kaipool.service;
 
 import java.time.Instant;
+import java.util.LinkedHashSet;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
@@ -129,7 +130,7 @@ public class CookingConnectionService {
                 other.getName(),
                 other.getBio(),
                 other.getProfileImageUrl(),
-                other.getFoodCultures(),
+                new LinkedHashSet<>(other.getFoodCultures()),
                 accepted ? other.getEmail() : null,
                 accepted ? connection.getMeetingPlace() : null,
                 accepted ? connection.getMeetingTime() : null,

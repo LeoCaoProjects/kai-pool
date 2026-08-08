@@ -25,6 +25,9 @@ import org.springframework.web.context.WebApplicationContext;
 
 import com.jayway.jsonpath.JsonPath;
 
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
+
 import nz.ac.aut.kaipool.repository.FoodRepository;
 import nz.ac.aut.kaipool.repository.CookingConnectionRepository;
 import nz.ac.aut.kaipool.repository.CollaborativeRecipeCacheRepository;
@@ -57,6 +60,9 @@ class FoundationApiTests {
     @Autowired
     private UserRepository userRepository;
 
+    @PersistenceContext
+    private EntityManager entityManager;
+
     private MockMvc mockMvc;
 
     @BeforeEach
@@ -84,6 +90,38 @@ class FoundationApiTests {
                                 """))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.token").isNotEmpty());
+    }
+
+    @Test
+    void loginSerializesCulturesForAnExistingDatabaseUser() throws Exception {
+        MvcResult registration = register("Culture User", "culture@kaipool.nz")
+                .andExpect(status().isCreated())
+                .andReturn();
+        String token = JsonPath.read(registration.getResponse().getContentAsString(), "$.token");
+
+        mockMvc.perform(put("/api/users/me")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "name":"Culture User",
+                                  "foodCultures":["Māori","Italian"],
+                                  "foodCulturesToExplore":["Samoan"],
+                                  "onboardingCompleted":true
+                                }
+                                """))
+                .andExpect(status().isOk());
+
+        entityManager.clear();
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email":"culture@kaipool.nz","password":"password123"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.user.foodCultures[0]").value("Māori"))
+                .andExpect(jsonPath("$.user.foodCulturesToExplore[0]").value("Samoan"));
     }
 
     @Test
@@ -455,6 +493,8 @@ class FoundationApiTests {
                 .andReturn();
         long connectionId = ((Number) JsonPath.read(
                 requested.getResponse().getContentAsString(), "$.id")).longValue();
+
+        entityManager.clear();
 
         mockMvc.perform(put("/api/cooking-connections/{id}/response", connectionId)
                         .header("Authorization", "Bearer " + requester.token())

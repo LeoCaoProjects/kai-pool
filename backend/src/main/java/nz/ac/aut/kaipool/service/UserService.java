@@ -87,8 +87,8 @@ public class UserService {
                 user.getProfileImageUrl(),
                 user.getLatitude(),
                 user.getLongitude(),
-                user.getFoodCultures(),
-                user.getFoodCulturesToExplore(),
+                new LinkedHashSet<>(user.getFoodCultures()),
+                new LinkedHashSet<>(user.getFoodCulturesToExplore()),
                 user.isOnboardingCompleted(),
                 user.getCreatedAt());
     }
