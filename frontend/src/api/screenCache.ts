@@ -21,6 +21,24 @@ const entries = {
 
 export type ScreenCacheKey = keyof typeof entries;
 
+const listeners = new Map<ScreenCacheKey, Set<() => void>>();
+
+const notifyScreenCache = (key: ScreenCacheKey) => {
+  listeners.get(key)?.forEach((listener) => listener());
+};
+
+export const subscribeScreenCache = (
+  key: ScreenCacheKey,
+  listener: () => void,
+) => {
+  const keyListeners = listeners.get(key) ?? new Set<() => void>();
+  keyListeners.add(listener);
+  listeners.set(key, keyListeners);
+  return () => {
+    keyListeners.delete(listener);
+  };
+};
+
 export const peekScreenCache = <K extends ScreenCacheKey>(key: K) =>
   entries[key].data as (typeof entries)[K]["data"];
 
@@ -37,6 +55,7 @@ export const loadScreenCache = async <T>(
   const requestPromise = fetcher().then((data) => {
     if ((entry.revision ?? 0) === requestRevision) {
       entry.data = data;
+      notifyScreenCache(key);
       return data;
     }
     return entry.data ?? data;
@@ -53,6 +72,7 @@ export const updateScreenCache = <T>(key: ScreenCacheKey, data: T) => {
   const entry = entries[key] as CacheEntry<T>;
   entry.revision = (entry.revision ?? 0) + 1;
   entry.data = data;
+  notifyScreenCache(key);
 };
 
 export const clearScreenCache = () => {
@@ -61,4 +81,7 @@ export const clearScreenCache = () => {
     entry.data = undefined;
     entry.promise = undefined;
   });
+  listeners.forEach((keyListeners) =>
+    keyListeners.forEach((listener) => listener()),
+  );
 };

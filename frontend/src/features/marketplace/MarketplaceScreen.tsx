@@ -1,9 +1,9 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useFocusEffect, useRouter } from "expo-router";
+import { useFocusEffect } from "expo-router";
 import {
   ActivityIndicator,
-  Image,
+  Alert,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -13,10 +13,16 @@ import {
 } from "react-native";
 
 import {
+  claimMarketplaceFood,
   getClaimedMarketplaceFoods,
   getMarketplaceFoods,
 } from "../../api/marketplace";
-import { loadScreenCache, peekScreenCache } from "../../api/screenCache";
+import {
+  loadScreenCache,
+  peekScreenCache,
+  subscribeScreenCache,
+  updateScreenCache,
+} from "../../api/screenCache";
 import type { MarketplaceFoodItem } from "../../types/models";
 import { colors } from "../../ui/theme";
 import { useAuth } from "../auth/AuthContext";
@@ -25,16 +31,58 @@ import MarketplaceMapView from "./MarketplaceMapView";
 
 type MarketplaceTab = "available" | "claimed";
 
-export default function MarketplaceScreen() {
-  const router = useRouter();
+export default function MarketplaceScreen({
+  view = "available",
+}: {
+  view?: MarketplaceTab;
+}) {
   const { user } = useAuth();
-  const [tab, setTab] = useState<MarketplaceTab>("available");
-  const initialItems = peekScreenCache("marketplaceAvailable");
+  const tab = view;
+  const initialItems = peekScreenCache(
+    tab === "available" ? "marketplaceAvailable" : "marketplaceClaimed",
+  );
   const [items, setItems] = useState<MarketplaceFoodItem[]>(initialItems ?? []);
   const [selectedOwnerId, setSelectedOwnerId] = useState<number | null>(null);
   const [loading, setLoading] = useState(!initialItems);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
+  const [collectingIds, setCollectingIds] = useState<Set<number>>(new Set());
+
+  const collect = useCallback(async (item: MarketplaceFoodItem) => {
+    const availableBefore = peekScreenCache("marketplaceAvailable") ?? [];
+    const claimedBefore = peekScreenCache("marketplaceClaimed") ?? [];
+    const optimistic = { ...item, claimedAt: new Date().toISOString() };
+
+    updateScreenCache(
+      "marketplaceAvailable",
+      availableBefore.filter((available) => available.id !== item.id),
+    );
+    updateScreenCache("marketplaceClaimed", [
+      optimistic,
+      ...claimedBefore.filter((claimed) => claimed.id !== item.id),
+    ]);
+    setCollectingIds((current) => new Set(current).add(item.id));
+
+    try {
+      const confirmed = await claimMarketplaceFood(item.id);
+      updateScreenCache("marketplaceClaimed", [
+        confirmed,
+        ...(peekScreenCache("marketplaceClaimed") ?? []).filter(
+          (claimed) => claimed.id !== item.id,
+        ),
+      ]);
+    } catch {
+      updateScreenCache("marketplaceAvailable", availableBefore);
+      updateScreenCache("marketplaceClaimed", claimedBefore);
+      Alert.alert("Unable to collect", "Please try again.");
+    } finally {
+      setCollectingIds((current) => {
+        const next = new Set(current);
+        next.delete(item.id);
+        return next;
+      });
+    }
+  }, []);
 
   const loadListings = useCallback(
     async (showRefresh = false) => {
@@ -115,10 +163,25 @@ export default function MarketplaceScreen() {
       ? { latitude: user.latitude, longitude: user.longitude }
       : null;
 
+  useEffect(() => {
+    const cacheKey =
+      tab === "available" ? "marketplaceAvailable" : "marketplaceClaimed";
+    return subscribeScreenCache(cacheKey, () => {
+      const cached = peekScreenCache(cacheKey);
+      if (cached) setItems(cached);
+    });
+  }, [tab]);
+
   if (tab === "claimed") {
     return (
       <View style={styles.screen}>
-        <MarketplaceTabs tab={tab} onChange={setTab} floating={false} />
+        <View style={styles.claimedTopSpacer} />
+        {!loading && !error && items.length > 0 ? (
+          <View style={styles.collectionCountRow}>
+            <Text style={styles.collectionCount}>YOUR COLLECTIONS</Text>
+            <Text style={styles.collectionTotal}>{items.length} items</Text>
+          </View>
+        ) : null}
         <ScrollView
           contentContainerStyle={styles.claimedContent}
           refreshControl={
@@ -128,13 +191,6 @@ export default function MarketplaceScreen() {
             />
           }
         >
-          <View style={styles.claimedHeading}>
-            <Text style={styles.eyebrow}>SAVED FOR PICKUP</Text>
-            <Text style={styles.claimedTitle}>My collections</Text>
-            <Text style={styles.claimedSubtitle}>
-              Everything you have collected, in one place.
-            </Text>
-          </View>
           {loading ? (
             <ActivityIndicator
               color={colors.primary}
@@ -156,18 +212,13 @@ export default function MarketplaceScreen() {
               </View>
               <Text style={styles.emptyTitle}>Nothing collected yet</Text>
               <Text style={styles.emptyText}>
-                Choose Nearby food and tap a neighbour on the map to see what
-                they are sharing.
+                Food you collect from neighbours will appear here.
               </Text>
             </View>
           ) : null}
           {!loading && !error
             ? items.map((item) => (
-                <ClaimedRow
-                  key={item.id}
-                  item={item}
-                  onPress={() => router.push(`/marketplace/${item.id}`)}
-                />
+                <ClaimedRow key={item.id} item={item} />
               ))
             : null}
         </ScrollView>
@@ -184,45 +235,15 @@ export default function MarketplaceScreen() {
         viewerCoordinate={viewerCoordinate}
       />
 
-      <View pointerEvents="box-none" style={styles.mapOverlay}>
-        <View style={styles.mapTopRow}>
-          <View style={styles.mapTitlePill}>
-            <View style={styles.liveDot} />
-            <View>
-              <Text style={styles.mapTitle}>Kai Pool nearby</Text>
-              <Text style={styles.mapMeta}>
-                {items.length} item{items.length === 1 ? "" : "s"} from{" "}
-                {owners.length} neighbour{owners.length === 1 ? "" : "s"}
-              </Text>
-            </View>
-          </View>
-          <Pressable
-            accessibilityLabel="Refresh map"
-            onPress={() => void loadListings()}
-            style={styles.refreshButton}
-          >
-            <Ionicons color={colors.primary} name="refresh" size={21} />
-          </Pressable>
-        </View>
-        <MarketplaceTabs tab={tab} onChange={setTab} floating />
-      </View>
-
-      {loading ? (
-        <View style={styles.loadingOverlay}>
-          <ActivityIndicator color={colors.primary} size="large" />
-        </View>
-      ) : null}
       {error ? (
         <View style={styles.errorOverlay}>
           <ErrorCard message={error} onRetry={() => void loadListings()} />
         </View>
       ) : null}
 
-      {!loading && !error ? (
+      {!loading && !error && selectedOwner ? (
         <View style={styles.sheet}>
-          <View style={styles.handle} />
-          {selectedOwner ? (
-            <>
+          <>
               <View style={styles.ownerHeading}>
                 <View style={styles.ownerAvatar}>
                   <Text style={styles.ownerInitial}>
@@ -233,12 +254,22 @@ export default function MarketplaceScreen() {
                   <Text numberOfLines={1} style={styles.ownerName}>
                     {selectedOwner.ownerName}
                   </Text>
-                  <Text style={styles.ownerDistance}>
-                    {selectedOwner.distanceKm == null
-                      ? "Nearby"
-                      : `About ${selectedOwner.distanceKm.toFixed(1)} km away`}{" "}
-                    · approximate area
-                  </Text>
+                  <View style={styles.ownerMetaRow}>
+                    <View style={styles.ownerMetaItem}>
+                      <Ionicons color={colors.textMuted} name="location-outline" size={13} />
+                      <Text style={styles.ownerMetaText}>
+                        {selectedOwner.distanceKm == null
+                          ? "Nearby"
+                          : `${selectedOwner.distanceKm.toFixed(1)} km away`}
+                      </Text>
+                    </View>
+                    <View style={styles.ownerMetaItem}>
+                      <Ionicons color={colors.accent} name="gift-outline" size={13} />
+                      <Text style={styles.ownerMetaText}>
+                        {selectedOwner.items.length} item{selectedOwner.items.length === 1 ? "" : "s"}
+                      </Text>
+                    </View>
+                  </View>
                 </View>
                 <Pressable
                   accessibilityLabel="Close listings"
@@ -248,39 +279,25 @@ export default function MarketplaceScreen() {
                   <Ionicons color={colors.textMuted} name="close" size={20} />
                 </Pressable>
               </View>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.foodRail}
-              >
+              <ScrollView showsVerticalScrollIndicator={false}>
+                <View style={styles.foodRail}>
                 {selectedOwner.items.map((item) => (
                   <GiveawayCard
                     key={item.id}
                     item={item}
-                    onPress={() => router.push(`/marketplace/${item.id}`)}
+                    collecting={collectingIds.has(item.id)}
+                    onCollect={() => void collect(item)}
                   />
                 ))}
+                </View>
               </ScrollView>
-            </>
-          ) : (
-            <View style={styles.sheetIntro}>
-              <View style={styles.sheetIcon}>
-                <Ionicons color="#FFFFFF" name="gift-outline" size={22} />
-              </View>
-              <View style={styles.sheetIntroCopy}>
-                <Text style={styles.sheetTitle}>
-                  {owners.length
-                    ? "Tap a neighbour to see their food"
-                    : "No giveaways nearby yet"}
-                </Text>
-                <Text style={styles.sheetText}>
-                  {owners.length
-                    ? "Number badges show how many free items they have listed."
-                    : "New giveaway markers will appear here when neighbours share food."}
-                </Text>
-              </View>
-            </View>
-          )}
+          </>
+        </View>
+      ) : null}
+      {!loading && !error && owners.length === 0 ? (
+        <View style={styles.mapEmpty}>
+          <Text style={styles.mapEmptyTitle}>No food nearby yet</Text>
+          <Text style={styles.mapEmptyText}>New listings will appear here.</Text>
         </View>
       ) : null}
     </View>
@@ -302,103 +319,98 @@ function spreadApproximateMarker(
   };
 }
 
-function MarketplaceTabs({
-  tab,
-  onChange,
-  floating,
+function GiveawayCard({
+  collecting,
+  item,
+  onCollect,
 }: {
-  tab: MarketplaceTab;
-  onChange: (tab: MarketplaceTab) => void;
-  floating: boolean;
+  collecting: boolean;
+  item: MarketplaceFoodItem;
+  onCollect: () => void;
 }) {
   return (
-    <View style={[styles.tabs, floating && styles.floatingTabs]}>
-      {(["available", "claimed"] as MarketplaceTab[]).map((value) => (
-        <Pressable
-          key={value}
-          accessibilityRole="tab"
-          accessibilityState={{ selected: tab === value }}
-          onPress={() => onChange(value)}
-          style={[styles.tab, tab === value && styles.activeTab]}
-        >
-          <Ionicons
-            color={tab === value ? colors.primary : colors.textMuted}
-            name={
-              value === "available" ? "map-outline" : "checkmark-circle-outline"
-            }
-            size={16}
-          />
-          <Text style={[styles.tabText, tab === value && styles.activeTabText]}>
-            {value === "available" ? "Nearby food" : "My collections"}
+    <View style={styles.giveawayCard}>
+      <View style={styles.giveawayIcon}>
+        <Ionicons color={colors.accent} name="gift-outline" size={20} />
+      </View>
+      <View style={styles.giveawayCopy}>
+        <View style={styles.giveawayNameLine}>
+          <Text numberOfLines={1} style={styles.giveawayName}>
+            {item.name}
           </Text>
-        </Pressable>
-      ))}
+          {item.quantity ? (
+            <Text numberOfLines={1} style={styles.giveawayQuantity}>
+              {item.quantity}
+            </Text>
+          ) : null}
+        </View>
+        <Text style={styles.giveawayDate}>{listedLabel(item.createdAt)}</Text>
+      </View>
+      <Pressable
+        accessibilityLabel={`Collect ${item.name}`}
+        disabled={collecting}
+        onPress={onCollect}
+        style={({ pressed }) => [
+          styles.collectButton,
+          (pressed || collecting) && styles.pressed,
+        ]}
+      >
+        {collecting ? (
+          <ActivityIndicator color="#FFFFFF" size="small" />
+        ) : (
+          <Text style={styles.collectButtonText}>Collect</Text>
+        )}
+      </Pressable>
     </View>
   );
 }
 
-function GiveawayCard({
-  item,
-  onPress,
-}: {
-  item: MarketplaceFoodItem;
-  onPress: () => void;
-}) {
+function ClaimedRow({ item }: { item: MarketplaceFoodItem }) {
   return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [styles.giveawayCard, pressed && styles.pressed]}
-    >
-      {item.imageUrl ? (
-        <Image source={{ uri: item.imageUrl }} style={styles.giveawayImage} />
-      ) : (
-        <View style={[styles.giveawayImage, styles.giveawayFallback]}>
-          <Ionicons color={colors.accent} name="leaf-outline" size={24} />
-        </View>
-      )}
-      <View style={styles.giveawayCopy}>
-        <Text numberOfLines={1} style={styles.giveawayName}>
-          {item.name}
-        </Text>
-        <Text numberOfLines={1} style={styles.giveawayQuantity}>
-          {item.quantity || "Quantity not specified"}
-        </Text>
-        <Text style={styles.viewListing}>View listing →</Text>
+    <View style={styles.claimedRow}>
+      <View style={styles.claimedIcon}>
+        <Ionicons color="#506AA8" name="bag-check-outline" size={20} />
       </View>
-    </Pressable>
+      <View style={styles.claimedRowCopy}>
+        <View style={styles.claimedNameLine}>
+          <Text numberOfLines={1} style={styles.claimedName}>
+            {item.name}
+          </Text>
+          {item.quantity ? (
+            <Text numberOfLines={1} style={styles.claimedQuantity}>
+              {item.quantity}
+            </Text>
+          ) : null}
+        </View>
+        <Text style={styles.claimedDate}>
+          {collectedLabel(item.claimedAt ?? item.createdAt)}
+        </Text>
+      </View>
+      <Text numberOfLines={1} style={styles.claimedOwner}>
+        {item.ownerName}
+      </Text>
+    </View>
   );
 }
 
-function ClaimedRow({
-  item,
-  onPress,
-}: {
-  item: MarketplaceFoodItem;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      style={({ pressed }) => [styles.claimedRow, pressed && styles.pressed]}
-    >
-      {item.imageUrl ? (
-        <Image source={{ uri: item.imageUrl }} style={styles.claimedImage} />
-      ) : (
-        <View style={[styles.claimedImage, styles.claimedFallback]}>
-          <Ionicons color={colors.primary} name="leaf-outline" size={22} />
-        </View>
-      )}
-      <View style={styles.claimedRowCopy}>
-        <Text numberOfLines={1} style={styles.claimedName}>
-          {item.name}
-        </Text>
-        <Text style={styles.claimedMeta}>
-          From {item.ownerName} · {item.quantity || "Quantity not specified"}
-        </Text>
-      </View>
-      <Ionicons color={colors.textMuted} name="chevron-forward" size={20} />
-    </Pressable>
-  );
+function listedLabel(createdAt: string) {
+  const elapsed = Date.now() - new Date(createdAt).getTime();
+  if (!Number.isFinite(elapsed) || elapsed < 0) return "Listed recently";
+  const minutes = Math.floor(elapsed / 60_000);
+  if (minutes < 1) return "Listed just now";
+  if (minutes < 60) return `Listed ${minutes} min ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `Listed ${hours} hr${hours === 1 ? "" : "s"} ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `Listed ${days} day${days === 1 ? "" : "s"} ago`;
+  return `Listed ${new Date(createdAt).toLocaleDateString(undefined, {
+    day: "numeric",
+    month: "short",
+  })}`;
+}
+
+function collectedLabel(claimedAt: string) {
+  return listedLabel(claimedAt).replace("Listed", "Collected");
 }
 
 function ErrorCard({
@@ -419,101 +431,6 @@ function ErrorCard({
 const styles = StyleSheet.create({
   screen: { backgroundColor: colors.background, flex: 1 },
   mapScreen: { backgroundColor: "#E9EEE4", flex: 1, overflow: "hidden" },
-  mapOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    paddingHorizontal: 14,
-    paddingTop: 12,
-  },
-  mapTopRow: { alignItems: "center", flexDirection: "row", gap: 10 },
-  mapTitlePill: {
-    alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.96)",
-    borderRadius: 18,
-    elevation: 4,
-    flex: 1,
-    flexDirection: "row",
-    gap: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 11,
-    shadowColor: "#173124",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
-  },
-  liveDot: {
-    backgroundColor: colors.accent,
-    borderRadius: 5,
-    height: 10,
-    width: 10,
-  },
-  mapTitle: {
-    color: colors.primary,
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 15,
-  },
-  mapMeta: {
-    color: colors.textMuted,
-    fontFamily: "Inter_400Regular",
-    fontSize: 11,
-    marginTop: 2,
-  },
-  refreshButton: {
-    alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.96)",
-    borderRadius: 22,
-    elevation: 4,
-    height: 44,
-    justifyContent: "center",
-    shadowColor: "#173124",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12,
-    shadowRadius: 12,
-    width: 44,
-  },
-  tabs: {
-    backgroundColor: "#E5E2D9",
-    borderRadius: 14,
-    flexDirection: "row",
-    marginHorizontal: 18,
-    marginTop: 14,
-    padding: 4,
-  },
-  floatingTabs: {
-    backgroundColor: "rgba(245,242,234,0.94)",
-    elevation: 3,
-    marginHorizontal: 0,
-    shadowColor: "#173124",
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
-  },
-  tab: {
-    alignItems: "center",
-    borderRadius: 11,
-    flex: 1,
-    flexDirection: "row",
-    gap: 6,
-    justifyContent: "center",
-    minHeight: 40,
-    paddingHorizontal: 8,
-  },
-  activeTab: { backgroundColor: "#FFFFFF" },
-  tabText: {
-    color: colors.textMuted,
-    fontFamily: "Inter_500Medium",
-    fontSize: 13,
-  },
-  activeTabText: { color: colors.primary, fontFamily: "Inter_600SemiBold" },
-  loadingOverlay: {
-    alignItems: "center",
-    backgroundColor: "rgba(253,249,240,0.72)",
-    bottom: 0,
-    justifyContent: "center",
-    left: 0,
-    position: "absolute",
-    right: 0,
-    top: 0,
-  },
   errorOverlay: { left: 18, position: "absolute", right: 18, top: 134 },
   errorCard: {
     alignItems: "center",
@@ -534,28 +451,21 @@ const styles = StyleSheet.create({
   },
   sheet: {
     backgroundColor: colors.surface,
-    borderTopLeftRadius: 26,
-    borderTopRightRadius: 26,
-    bottom: 0,
+    borderColor: colors.surfaceHigh,
+    borderRadius: 24,
+    borderWidth: 1,
+    bottom: 104,
     elevation: 14,
-    left: 0,
-    minHeight: 122,
-    paddingBottom: 16,
+    left: 14,
+    maxHeight: 310,
+    paddingBottom: 14,
+    paddingTop: 16,
     position: "absolute",
-    right: 0,
+    right: 14,
     shadowColor: "#173124",
     shadowOffset: { width: 0, height: -5 },
     shadowOpacity: 0.16,
     shadowRadius: 18,
-  },
-  handle: {
-    alignSelf: "center",
-    backgroundColor: "#D4D6D0",
-    borderRadius: 2,
-    height: 4,
-    marginBottom: 12,
-    marginTop: 9,
-    width: 38,
   },
   ownerHeading: {
     alignItems: "center",
@@ -582,11 +492,17 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_600SemiBold",
     fontSize: 17,
   },
-  ownerDistance: {
+  ownerMetaRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 13,
+    marginTop: 4,
+  },
+  ownerMetaItem: { alignItems: "center", flexDirection: "row", gap: 4 },
+  ownerMetaText: {
     color: colors.textMuted,
     fontFamily: "Inter_400Regular",
     fontSize: 11,
-    marginTop: 3,
   },
   closeButton: {
     alignItems: "center",
@@ -596,128 +512,169 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     width: 36,
   },
-  foodRail: { gap: 10, paddingHorizontal: 18, paddingTop: 14 },
+  foodRail: { gap: 8, paddingHorizontal: 16, paddingTop: 14 },
   giveawayCard: {
+    alignItems: "center",
     backgroundColor: colors.surfaceLow,
     borderColor: colors.surfaceHigh,
     borderRadius: 16,
     borderWidth: 1,
     flexDirection: "row",
-    overflow: "hidden",
-    width: 264,
+    gap: 11,
+    padding: 12,
+    width: "100%",
   },
-  giveawayImage: { backgroundColor: colors.surfaceHigh, height: 94, width: 88 },
-  giveawayFallback: { alignItems: "center", justifyContent: "center" },
+  giveawayIcon: {
+    alignItems: "center",
+    backgroundColor: "#F8E6D8",
+    borderRadius: 13,
+    height: 42,
+    justifyContent: "center",
+    width: 42,
+  },
   giveawayCopy: {
     flex: 1,
     justifyContent: "center",
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+  },
+  giveawayNameLine: {
+    alignItems: "baseline",
+    flexDirection: "row",
+    gap: 7,
   },
   giveawayName: {
     color: colors.text,
     fontFamily: "Inter_600SemiBold",
     fontSize: 15,
+    flexShrink: 1,
   },
   giveawayQuantity: {
     color: colors.textMuted,
     fontFamily: "Inter_400Regular",
     fontSize: 11,
-    marginTop: 4,
+    fontStyle: "italic",
+    flexShrink: 1,
   },
-  viewListing: {
-    color: colors.accent,
-    fontFamily: "Inter_600SemiBold",
+  giveawayDate: {
+    color: colors.textMuted,
+    fontFamily: "Inter_400Regular",
     fontSize: 11,
-    marginTop: 10,
+    marginTop: 5,
   },
-  pressed: { opacity: 0.72 },
-  sheetIntro: {
-    alignItems: "center",
-    flexDirection: "row",
-    gap: 13,
-    paddingBottom: 7,
-    paddingHorizontal: 20,
-  },
-  sheetIcon: {
+  collectButton: {
     alignItems: "center",
     backgroundColor: colors.accent,
-    borderRadius: 22,
-    height: 44,
+    borderRadius: 12,
+    height: 38,
     justifyContent: "center",
-    width: 44,
+    minWidth: 66,
+    paddingHorizontal: 10,
   },
-  sheetIntroCopy: { flex: 1 },
-  sheetTitle: {
+  collectButtonText: {
+    color: "#FFFFFF",
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 12,
+  },
+  pressed: { opacity: 0.72 },
+  mapEmpty: {
+    alignItems: "center",
+    alignSelf: "center",
+    backgroundColor: colors.surface,
+    borderColor: colors.surfaceHigh,
+    borderRadius: 18,
+    borderWidth: 1,
+    bottom: 96,
+    paddingHorizontal: 22,
+    paddingVertical: 14,
+    position: "absolute",
+  },
+  mapEmptyTitle: {
     color: colors.text,
     fontFamily: "Inter_600SemiBold",
-    fontSize: 16,
+    fontSize: 14,
   },
-  sheetText: {
+  mapEmptyText: {
     color: colors.textMuted,
     fontFamily: "Inter_400Regular",
     fontSize: 12,
-    lineHeight: 17,
-    marginTop: 3,
+    marginTop: 2,
   },
-  claimedContent: { paddingBottom: 42 },
-  claimedHeading: { paddingHorizontal: 20, paddingBottom: 20, paddingTop: 24 },
-  eyebrow: {
-    color: colors.accent,
+  claimedContent: { paddingBottom: 42, paddingTop: 4 },
+  claimedTopSpacer: { height: 224 },
+  collectionCountRow: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingHorizontal: 22,
+    paddingBottom: 10,
+    paddingTop: 10,
+  },
+  collectionCount: {
+    color: colors.secondary,
     fontFamily: "Inter_600SemiBold",
     fontSize: 11,
-    letterSpacing: 1.2,
+    letterSpacing: 1,
   },
-  claimedTitle: {
-    color: colors.primary,
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 27,
-    letterSpacing: -0.5,
-    marginTop: 7,
-  },
-  claimedSubtitle: {
+  collectionTotal: {
     color: colors.textMuted,
-    fontFamily: "Inter_400Regular",
-    fontSize: 14,
-    marginTop: 5,
+    fontFamily: "Inter_500Medium",
+    fontSize: 12,
   },
   loader: { marginTop: 38 },
   claimedRow: {
     alignItems: "center",
     backgroundColor: colors.surface,
     borderColor: colors.surfaceHigh,
-    borderRadius: 16,
+    borderRadius: 18,
     borderWidth: 1,
     flexDirection: "row",
     gap: 12,
     marginBottom: 10,
     marginHorizontal: 20,
-    padding: 10,
+    minHeight: 76,
+    padding: 12,
   },
-  claimedImage: {
-    backgroundColor: colors.surfaceHigh,
-    borderRadius: 11,
-    height: 58,
-    width: 58,
+  claimedIcon: {
+    alignItems: "center",
+    backgroundColor: "#E8EDF8",
+    borderRadius: 13,
+    height: 44,
+    justifyContent: "center",
+    width: 44,
   },
-  claimedFallback: { alignItems: "center", justifyContent: "center" },
   claimedRowCopy: { flex: 1, gap: 5 },
+  claimedNameLine: { alignItems: "baseline", flexDirection: "row", gap: 7 },
   claimedName: {
     color: colors.text,
+    flexShrink: 1,
     fontFamily: "Inter_600SemiBold",
     fontSize: 16,
   },
-  claimedMeta: {
+  claimedQuantity: {
     color: colors.textMuted,
     fontFamily: "Inter_400Regular",
+    fontSize: 11,
+    fontStyle: "italic",
+    flexShrink: 1,
+  },
+  claimedDate: {
+    color: colors.textMuted,
+    fontFamily: "Inter_400Regular",
+    fontSize: 11,
+  },
+  claimedOwner: {
+    color: "#506AA8",
+    fontFamily: "Inter_600SemiBold",
     fontSize: 12,
+    maxWidth: 76,
   },
   emptyCard: {
     alignItems: "center",
     backgroundColor: colors.surface,
     borderRadius: 20,
     marginHorizontal: 20,
-    marginTop: 28,
+    borderColor: colors.surfaceHigh,
+    borderWidth: 1,
+    marginTop: 24,
     padding: 28,
   },
   emptyIcon: {

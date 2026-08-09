@@ -6,7 +6,10 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { useAuth } from "../../src/features/auth/AuthContext";
 import KaiTabBar from "../../src/ui/KaiTabBar";
 import { getFoods } from "../../src/api/foods";
-import { getMarketplaceFoods } from "../../src/api/marketplace";
+import {
+  getClaimedMarketplaceFoods,
+  getMarketplaceFoods,
+} from "../../src/api/marketplace";
 import { getCookingMatches } from "../../src/api/matches";
 import { getCookingConnections } from "../../src/api/connections";
 import { loadScreenCache } from "../../src/api/screenCache";
@@ -15,6 +18,8 @@ export default function TabLayout() {
   const { user, loading } = useAuth();
   const pathname = usePathname();
   const isScanScreen = pathname.endsWith("/scan");
+  const isDiscoverScreen = pathname.endsWith("/discover");
+  const isEdgeToEdgeScreen = isScanScreen || isDiscoverScreen;
 
   useEffect(() => {
     if (!user?.onboardingCompleted) return;
@@ -22,6 +27,7 @@ export default function TabLayout() {
     void Promise.allSettled([
       loadScreenCache("foods", getFoods),
       loadScreenCache("marketplaceAvailable", getMarketplaceFoods),
+      loadScreenCache("marketplaceClaimed", getClaimedMarketplaceFoods),
       loadScreenCache("matches", getCookingMatches),
       loadScreenCache("connections", getCookingConnections),
     ]);
@@ -45,7 +51,7 @@ export default function TabLayout() {
 
   return (
     <SafeAreaView
-      edges={isScanScreen ? [] : ["top"]}
+      edges={isEdgeToEdgeScreen ? [] : ["top"]}
       style={{
         backgroundColor: isScanScreen ? "#000000" : "#FDF9F0",
         flex: 1,
@@ -53,9 +59,18 @@ export default function TabLayout() {
     >
       <Tabs
         tabBar={(props) => (isScanScreen ? null : <KaiTabBar {...props} />)}
-        screenOptions={{
+        screenOptions={({ route }) => ({
           headerShown: false,
-        }}
+          tabBarStyle:
+            route.name === "discover"
+              ? {
+                  backgroundColor: "transparent",
+                  borderTopWidth: 0,
+                  elevation: 0,
+                  position: "absolute",
+                }
+              : undefined,
+        })}
       >
         <Tabs.Screen
           name="food-pool"

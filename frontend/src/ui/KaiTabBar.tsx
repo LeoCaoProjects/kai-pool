@@ -81,6 +81,7 @@ export default function KaiTabBar({
         ]),
       )}
       bottomSpacing={Math.max(insets.bottom - 10, 8)}
+      edgeToEdge={state.routes[state.index]?.name === "discover"}
     />
   );
 }
@@ -90,6 +91,7 @@ export function KaiTabBarPreview({ activeRoute }: { activeRoute: TabName }) {
     <NavigationSurface
       activeRoute={activeRoute}
       bottomSpacing={7}
+      edgeToEdge={false}
       routes={Object.keys(tabDetails) as TabName[]}
     />
   );
@@ -99,6 +101,7 @@ function NavigationSurface({
   accessibilityLabels = {},
   activeRoute,
   bottomSpacing,
+  edgeToEdge,
   onLongPress,
   onSelect,
   routes,
@@ -106,12 +109,19 @@ function NavigationSurface({
   accessibilityLabels?: Record<string, string | undefined>;
   activeRoute: TabName;
   bottomSpacing: number;
+  edgeToEdge: boolean;
   onLongPress?: (route: TabName) => void;
   onSelect?: (route: TabName) => void;
   routes: TabName[];
 }) {
   return (
-    <View style={[styles.navigationArea, { paddingBottom: bottomSpacing }]}>
+    <View
+      style={[
+        styles.navigationArea,
+        edgeToEdge && styles.edgeToEdgeNavigationArea,
+        { paddingBottom: bottomSpacing },
+      ]}
+    >
       <View style={styles.navigationBar}>
         {routes.map((routeName) => {
           const details = tabDetails[routeName];
@@ -153,6 +163,13 @@ const styles = StyleSheet.create({
     backgroundColor: colors.background,
     paddingHorizontal: 18,
     paddingTop: 4,
+  },
+  edgeToEdgeNavigationArea: {
+    backgroundColor: "transparent",
+    bottom: 0,
+    left: 0,
+    position: "absolute",
+    right: 0,
   },
   navigationBar: {
     alignItems: "center",

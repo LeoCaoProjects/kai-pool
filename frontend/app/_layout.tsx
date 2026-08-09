@@ -44,14 +44,6 @@ export default function RootLayout() {
             }}
           />
           <Stack.Screen
-            name="marketplace/[listingId]"
-            options={{
-              ...detailOptions,
-              title: "Giveaway details",
-              headerBackTitle: "Discover",
-            }}
-          />
-          <Stack.Screen
             name="connection/[connectionId]"
             options={{
               ...detailOptions,
