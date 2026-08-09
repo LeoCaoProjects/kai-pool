@@ -29,26 +29,25 @@ export default function ProfileScreen() {
     ]);
 
   return (
-    <ScrollView
-      style={sharedStyles.screen}
-      contentContainerStyle={styles.content}
-    >
+    <View style={sharedStyles.screen}>
       <PageHeader
         eyebrow="YOUR ACCOUNT"
         icon="person-circle"
         title="Profile"
       />
-      <View style={styles.formContent}>
-        <ProfileForm
-          showHeading={false}
-          submitLabel="Save profile"
-          title="Profile"
-        />
-        <Pressable onPress={confirmSignOut} style={styles.logout}>
-          <Text style={styles.logoutText}>Log out</Text>
-        </Pressable>
-      </View>
-    </ScrollView>
+      <ScrollView contentContainerStyle={styles.content}>
+        <View style={styles.formContent}>
+          <ProfileForm
+            showHeading={false}
+            submitLabel="Save profile"
+            title="Profile"
+          />
+          <Pressable onPress={confirmSignOut} style={styles.logout}>
+            <Text style={styles.logoutText}>Log out</Text>
+          </Pressable>
+        </View>
+      </ScrollView>
+    </View>
   );
 }
 

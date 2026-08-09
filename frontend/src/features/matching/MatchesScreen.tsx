@@ -173,7 +173,10 @@ export function MatchesScreen({
   return (
     <ScrollView
       style={sharedStyles.screen}
-      contentContainerStyle={styles.content}
+      contentContainerStyle={[
+        styles.content,
+        !showHeader && styles.embeddedContent,
+      ]}
       refreshControl={
         <RefreshControl
           refreshing={refreshing}
@@ -461,6 +464,7 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 48,
   },
+  embeddedContent: { paddingTop: 12 },
   center: {
     alignItems: "center",
     backgroundColor: colors.background,
@@ -499,7 +503,7 @@ const styles = StyleSheet.create({
   tabText: {
     color: colors.textMuted,
     fontFamily: "Inter_500Medium",
-    fontSize: 12,
+    fontSize: 13,
   },
   activeTabText: { color: "#FFFFFF", fontFamily: "Inter_600SemiBold" },
   matchCard: {
