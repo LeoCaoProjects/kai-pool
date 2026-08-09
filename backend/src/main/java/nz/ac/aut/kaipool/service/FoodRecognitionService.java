@@ -72,10 +72,10 @@ public class FoodRecognitionService {
                 continue;
             }
 
-            String name = item.name().trim();
+            String name = truncate(item.name().trim(), 150);
             String quantity = item.quantity() == null || item.quantity().isBlank()
                     ? null
-                    : item.quantity().trim();
+                    : truncate(item.quantity().trim(), 100);
             Double confidence = validConfidence(item.confidence()) ? item.confidence() : null;
             uniqueItems.putIfAbsent(
                     name.toLowerCase(Locale.ROOT),
@@ -89,5 +89,9 @@ public class FoodRecognitionService {
                 && Double.isFinite(confidence)
                 && confidence >= 0
                 && confidence <= 1;
+    }
+
+    private String truncate(String value, int maxLength) {
+        return value.length() <= maxLength ? value : value.substring(0, maxLength).trim();
     }
 }

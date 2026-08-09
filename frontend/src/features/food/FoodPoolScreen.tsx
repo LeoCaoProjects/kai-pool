@@ -11,6 +11,7 @@ import {
   ActivityIndicator,
   Alert,
   Animated,
+  Easing,
   findNodeHandle,
   Modal,
   PanResponder,
@@ -21,13 +22,19 @@ import {
   StyleSheet,
   Text,
   TextInput,
+  useWindowDimensions,
   View,
   Keyboard,
+  LayoutAnimation,
 } from "react-native";
 
 import { ApiError } from "../../api/client";
 import { createFood, deleteFood, getFoods, updateFood } from "../../api/foods";
-import { loadScreenCache, peekScreenCache } from "../../api/screenCache";
+import {
+  loadScreenCache,
+  peekScreenCache,
+  updateScreenCache,
+} from "../../api/screenCache";
 import type { FoodItem } from "../../types/models";
 import type { FoodRequest } from "../../types/requests";
 import PageHeader from "../../ui/PageHeader";
@@ -80,6 +87,8 @@ export default function FoodPoolScreen({
   const [loading, setLoading] = useState(!previewMode && !cachedFoods);
   const [refreshing, setRefreshing] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [listScrollEnabled, setListScrollEnabled] = useState(true);
+  const [openSwipeId, setOpenSwipeId] = useState<number | null>(null);
   const [error, setError] = useState("");
   const sheetTranslateY = useRef(new Animated.Value(0)).current;
   const keyboardLift = useRef(new Animated.Value(0)).current;
@@ -292,6 +301,42 @@ export default function FoodPoolScreen({
       },
     ]);
 
+  const deleteFromList = async (food: FoodItem) => {
+    LayoutAnimation.configureNext({
+      duration: 220,
+      update: { type: LayoutAnimation.Types.easeInEaseOut },
+      delete: {
+        property: LayoutAnimation.Properties.opacity,
+        type: LayoutAnimation.Types.easeInEaseOut,
+      },
+    });
+    setFoods((current) => {
+      const remaining = current.filter((item) => item.id !== food.id);
+      updateScreenCache("foods", remaining);
+      return remaining;
+    });
+    try {
+      await deleteFood(food.id);
+    } catch (caught) {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setFoods((current) => {
+        if (current.some((item) => item.id === food.id)) return current;
+        const restored = [...current, food].sort(
+          (first, second) =>
+            new Date(second.createdAt).getTime() -
+            new Date(first.createdAt).getTime(),
+        );
+        updateScreenCache("foods", restored);
+        return restored;
+      });
+      setError(
+        caught instanceof ApiError
+          ? caught.message
+          : "Could not delete this food.",
+      );
+    }
+  };
+
   return (
     <View style={sharedStyles.screen}>
       <PageHeader
@@ -316,6 +361,9 @@ export default function FoodPoolScreen({
       ) : null}
       <ScrollView
         contentContainerStyle={styles.content}
+        directionalLockEnabled
+        onScrollBeginDrag={() => setOpenSwipeId(null)}
+        scrollEnabled={listScrollEnabled}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -356,57 +404,19 @@ export default function FoodPoolScreen({
         {foods.length > 0 ? (
           <View style={styles.listSection}>
             <View style={styles.list}>
-              {foods.map((food) => {
-                const giveaway = food.availability === "GIVEAWAY";
-                return (
-                  <Pressable
-                    key={food.id}
-                    onPress={() => openEdit(food)}
-                    style={({ pressed }) => [
-                      styles.row,
-                      pressed && styles.rowPressed,
-                    ]}
-                  >
-                    <View
-                      style={[
-                        styles.foodIcon,
-                        giveaway && styles.giveawayIcon,
-                      ]}
-                    >
-                      <Ionicons
-                        color={giveaway ? colors.accent : colors.primary}
-                        name={giveaway ? "gift-outline" : "leaf-outline"}
-                        size={21}
-                      />
-                    </View>
-                    <View style={styles.rowCopy}>
-                      <View style={styles.nameLine}>
-                        <Text numberOfLines={1} style={styles.foodName}>
-                          {food.name}
-                        </Text>
-                        {food.quantity ? (
-                          <Text numberOfLines={1} style={styles.quantity}>
-                            {food.quantity}
-                          </Text>
-                        ) : null}
-                      </View>
-                      <Text style={styles.addedAt}>
-                        {addedLabel(food.createdAt)}
-                      </Text>
-                    </View>
-                    <View style={styles.rowMeta}>
-                      <Text
-                        style={[
-                          styles.statusText,
-                          giveaway && styles.giveawayText,
-                        ]}
-                      >
-                        {labelFor(food.availability)}
-                      </Text>
-                    </View>
-                  </Pressable>
-                );
-              })}
+              {foods.map((food) => (
+                <SwipeableFoodRow
+                  food={food}
+                  activeSwipeId={openSwipeId}
+                  key={food.id}
+                  onDelete={() => deleteFromList(food)}
+                  onOpen={() => openEdit(food)}
+                  onRevealChange={setOpenSwipeId}
+                  onSwipeStateChange={(swiping) =>
+                    setListScrollEnabled(!swiping)
+                  }
+                />
+              ))}
             </View>
           </View>
         ) : null}
@@ -436,6 +446,7 @@ export default function FoodPoolScreen({
               },
             ]}
           >
+            <View pointerEvents="none" style={styles.sheetBottomFill} />
             <View {...sheetPanResponder.panHandlers} style={styles.dragArea}>
               <View style={styles.sheetHandle} />
             </View>
@@ -466,6 +477,7 @@ export default function FoodPoolScreen({
               <Field label="Food name">
                 <TextInput
                   ref={nameInput}
+                  maxLength={150}
                   value={draft.name}
                   onChangeText={(name) => setDraft({ ...draft, name })}
                   placeholder="Fresh taro root"
@@ -476,6 +488,7 @@ export default function FoodPoolScreen({
               <Field label="Quantity">
                 <TextInput
                   ref={quantityInput}
+                  maxLength={100}
                   value={draft.quantity ?? ""}
                   onChangeText={(quantity) =>
                     setDraft({ ...draft, quantity: quantity || null })
@@ -592,6 +605,182 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
+function SwipeableFoodRow({
+  activeSwipeId,
+  food,
+  onDelete,
+  onOpen,
+  onRevealChange,
+  onSwipeStateChange,
+}: {
+  activeSwipeId: number | null;
+  food: FoodItem;
+  onDelete: () => Promise<void>;
+  onOpen: () => void;
+  onRevealChange: (id: number | null) => void;
+  onSwipeStateChange: (swiping: boolean) => void;
+}) {
+  const { width: screenWidth } = useWindowDimensions();
+  const translateX = useRef(new Animated.Value(0)).current;
+  const restingX = useRef(0);
+  const deleting = useRef(false);
+  const giveaway = food.availability === "GIVEAWAY";
+
+  useEffect(() => {
+    if (
+      deleting.current ||
+      activeSwipeId === food.id ||
+      restingX.current === 0
+    ) {
+      return;
+    }
+    restingX.current = 0;
+    Animated.spring(translateX, {
+      damping: 22,
+      mass: 0.75,
+      overshootClamping: true,
+      stiffness: 240,
+      toValue: 0,
+      useNativeDriver: true,
+    }).start();
+  }, [activeSwipeId, food.id, translateX]);
+
+  const settle = (toValue: number) => {
+    restingX.current = toValue;
+    Animated.spring(translateX, {
+      damping: 22,
+      mass: 0.75,
+      overshootClamping: true,
+      stiffness: 240,
+      toValue,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const completeDelete = () => {
+    if (deleting.current) return;
+    deleting.current = true;
+    onRevealChange(null);
+    Animated.timing(translateX, {
+      duration: 280,
+      easing: Easing.out(Easing.cubic),
+      toValue: -screenWidth,
+      useNativeDriver: true,
+    }).start(() => void onDelete());
+  };
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, gesture) =>
+        gesture.dx < -3 &&
+        (Math.abs(gesture.dx) > Math.abs(gesture.dy) * 0.65 ||
+          gesture.vx < -0.35),
+      onMoveShouldSetPanResponderCapture: (_, gesture) =>
+        gesture.dx < -3 &&
+        (Math.abs(gesture.dx) > Math.abs(gesture.dy) * 0.65 ||
+          gesture.vx < -0.35),
+      onPanResponderTerminationRequest: () => false,
+      onShouldBlockNativeResponder: () => true,
+      onPanResponderGrant: () => {
+        onRevealChange(food.id);
+        onSwipeStateChange(true);
+      },
+      onPanResponderMove: (_, gesture) => {
+        const next = Math.min(0, restingX.current + gesture.dx);
+        translateX.setValue(Math.max(-520, next));
+      },
+      onPanResponderRelease: (_, gesture) => {
+        const next = restingX.current + gesture.dx;
+        const projected = next + gesture.vx * 210;
+        onSwipeStateChange(false);
+        const deliberateFlick =
+          next < -screenWidth * 0.06 &&
+          gesture.vx < -0.65 &&
+          projected < -screenWidth * 0.35;
+        if (next < -screenWidth * 0.82 || deliberateFlick) {
+          completeDelete();
+        } else {
+          const reveal = next < -44;
+          settle(reveal ? -88 : 0);
+          onRevealChange(reveal ? food.id : null);
+        }
+      },
+      onPanResponderTerminate: () => {
+        onSwipeStateChange(false);
+        settle(restingX.current);
+      },
+    }),
+  ).current;
+
+  const handleOpen = () => {
+    if (restingX.current < 0) {
+      settle(0);
+      onRevealChange(null);
+      return;
+    }
+    onOpen();
+  };
+
+  return (
+    <Animated.View style={styles.swipeContainer}>
+      <Pressable
+        accessibilityLabel={`Delete ${food.name}`}
+        onPress={completeDelete}
+        style={styles.deleteAction}
+      >
+        <Ionicons color="#FFFFFF" name="trash-outline" size={20} />
+        <Text style={styles.deleteActionText}>Delete</Text>
+      </Pressable>
+      <Animated.View
+        {...panResponder.panHandlers}
+        style={{ transform: [{ translateX }] }}
+      >
+        <Pressable
+          onPress={handleOpen}
+          style={({ pressed }) => [
+            styles.row,
+            pressed && styles.rowPressed,
+          ]}
+        >
+          <View
+            style={[styles.foodIcon, giveaway && styles.giveawayIcon]}
+          >
+            <Ionicons
+              color={giveaway ? colors.accent : colors.primary}
+              name={giveaway ? "gift-outline" : "leaf-outline"}
+              size={21}
+            />
+          </View>
+          <View style={styles.rowCopy}>
+            <View style={styles.nameLine}>
+              <Text numberOfLines={1} style={styles.foodName}>
+                {food.name}
+              </Text>
+              {food.quantity ? (
+                <Text numberOfLines={1} style={styles.quantity}>
+                  {food.quantity}
+                </Text>
+              ) : null}
+            </View>
+            <Text style={styles.addedAt}>{addedLabel(food.createdAt)}</Text>
+          </View>
+          <View style={styles.rowMeta}>
+            <Text
+              style={[
+                styles.statusText,
+                giveaway && styles.giveawayText,
+              ]}
+            >
+              {labelFor(food.availability)}
+            </Text>
+          </View>
+        </Pressable>
+      </Animated.View>
+      <View pointerEvents="none" style={styles.rowOutline} />
+    </Animated.View>
+  );
+}
+
 const styles = StyleSheet.create({
   content: { flexGrow: 1, gap: 16, paddingBottom: 48 },
   add: {
@@ -624,20 +813,47 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_500Medium",
     fontSize: 12,
   },
-  list: { gap: 8 },
+  list: {},
+  swipeContainer: {
+    backgroundColor: colors.error,
+    borderRadius: 18,
+    height: 76,
+    marginBottom: 8,
+    overflow: "hidden",
+    position: "relative",
+  },
+  deleteAction: {
+    alignItems: "center",
+    backgroundColor: colors.error,
+    bottom: 0,
+    gap: 3,
+    justifyContent: "center",
+    position: "absolute",
+    right: 0,
+    top: 0,
+    width: 88,
+  },
+  deleteActionText: {
+    color: "#FFFFFF",
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 11,
+  },
   row: {
     alignItems: "center",
     backgroundColor: colors.surface,
-    borderColor: colors.surfaceHigh,
-    borderRadius: 18,
-    borderWidth: 1,
     flexDirection: "row",
     gap: 13,
     minHeight: 76,
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
-  rowPressed: { borderColor: colors.outline },
+  rowPressed: { backgroundColor: colors.surfaceLow },
+  rowOutline: {
+    borderColor: colors.surfaceHigh,
+    borderRadius: 18,
+    borderWidth: 1,
+    ...StyleSheet.absoluteFillObject,
+  },
   foodIcon: {
     alignItems: "center",
     backgroundColor: colors.secondaryContainer,
@@ -733,8 +949,16 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     maxHeight: "88%",
-    overflow: "hidden",
+    overflow: "visible",
     paddingBottom: Platform.OS === "ios" ? 24 : 16,
+  },
+  sheetBottomFill: {
+    backgroundColor: colors.surface,
+    bottom: -84,
+    height: 86,
+    left: 0,
+    position: "absolute",
+    right: 0,
   },
   sheetHandle: {
     alignSelf: "center",

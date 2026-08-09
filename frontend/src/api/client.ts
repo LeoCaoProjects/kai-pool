@@ -4,6 +4,9 @@ import type { ApiErrorResponse } from "../types/api";
 
 let accessToken: string | null = null;
 let unauthorizedHandler: (() => void) | null = null;
+let sessionValidation:
+  | { token: string; promise: Promise<boolean> }
+  | null = null;
 export const ACCESS_TOKEN_KEY = "kai-pool-token";
 export const AUTH_USER_KEY = "kai-pool-user";
 
@@ -25,13 +28,35 @@ export const setUnauthorizedHandler = (handler: (() => void) | null) => {
   unauthorizedHandler = handler;
 };
 
+const sessionIsStillValid = (token: string): Promise<boolean> => {
+  if (sessionValidation?.token === token) return sessionValidation.promise;
+
+  const promise = fetch(buildApiUrl("/api/auth/me"), {
+    headers: {
+      Accept: "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+  })
+    .then((response) => response.status !== 401)
+    // A network failure cannot prove that a local session is invalid.
+    .catch(() => true)
+    .finally(() => {
+      if (sessionValidation?.token === token) sessionValidation = null;
+    });
+  sessionValidation = { token, promise };
+  return promise;
+};
+
 export const apiRequest = async <T>(
   path: string,
   options: RequestInit = {},
+  unauthorizedRetries = 2,
 ): Promise<T> => {
-  if (!accessToken) {
-    accessToken = await AsyncStorage.getItem(ACCESS_TOKEN_KEY);
-  }
+  // AsyncStorage is the source of truth across Expo Fast Refreshes and
+  // concurrent requests; the module value is only an immediate login cache.
+  const storedToken = await AsyncStorage.getItem(ACCESS_TOKEN_KEY);
+  if (storedToken) accessToken = storedToken;
+  else if (!accessToken) accessToken = null;
   const headers = new Headers(options.headers);
   headers.set("Accept", "application/json");
   const isFormData =
@@ -56,11 +81,24 @@ export const apiRequest = async <T>(
       .catch(() => null)) as ApiErrorResponse | null;
     const sessionIsInvalid =
       response.status === 401 && error?.message === "Authentication required";
+    if (sessionIsInvalid && !requestToken) {
+      await AsyncStorage.multiRemove([ACCESS_TOKEN_KEY, AUTH_USER_KEY]);
+      unauthorizedHandler?.();
+      throw new ApiError(error.message, response.status, error.fields);
+    }
+    const tokenWasConfirmedInvalid =
+      sessionIsInvalid &&
+      requestToken &&
+      !(await sessionIsStillValid(requestToken));
     if (
       sessionIsInvalid &&
       requestToken &&
-      accessToken === requestToken
+      !tokenWasConfirmedInvalid &&
+      unauthorizedRetries > 0
     ) {
+      return apiRequest<T>(path, options, unauthorizedRetries - 1);
+    }
+    if (tokenWasConfirmedInvalid && accessToken === requestToken) {
       accessToken = null;
       await AsyncStorage.removeItem(ACCESS_TOKEN_KEY);
       unauthorizedHandler?.();

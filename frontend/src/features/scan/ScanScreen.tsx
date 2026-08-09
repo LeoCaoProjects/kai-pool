@@ -28,7 +28,7 @@ import {
 } from "react-native-safe-area-context";
 
 import { ApiError } from "../../api/client";
-import { createFood } from "../../api/foods";
+import { createFoods } from "../../api/foods";
 import { scanFood } from "../../api/scan";
 import type { FoodItem } from "../../types/models";
 import { colors } from "../../ui/theme";
@@ -286,7 +286,7 @@ export default function ScanScreen() {
     setError("");
     try {
       const photo = await cameraRef.current.takePictureAsync({
-        quality: 0.65,
+        quality: 0.4,
         shutterSound: true,
       });
       if (!photo) throw new Error("No photo returned");
@@ -317,7 +317,7 @@ export default function ScanScreen() {
       }
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ["images"],
-        quality: 0.65,
+        quality: 0.4,
       });
       if (!result.canceled) {
         setGalleryOpen(false);
@@ -414,17 +414,14 @@ export default function ScanScreen() {
     setSaving(true);
     setError("");
     try {
-      const savedFoods: FoodItem[] = [];
-      for (const item of items) {
-        savedFoods.push(
-          await createFood({
-            name: item.name.trim(),
-            quantity: item.quantity.trim() || null,
+      const savedFoods = await createFoods(
+        items.map((item) => ({
+            name: item.name.trim().slice(0, 150),
+            quantity: item.quantity.trim().slice(0, 100) || null,
             imageUrl: null,
             availability: "COOK_TOGETHER",
-          }),
-        );
-      }
+          })),
+      );
       setPoolPreviewFoods(savedFoods);
       setSaved(true);
       setMessage(
@@ -952,6 +949,7 @@ function FoodResultCard({
       </View>
       <TextInput
         ref={onInputRef}
+        maxLength={150}
         onChangeText={(value) => onUpdate("name", value)}
         placeholder="Food name"
         placeholderTextColor="#7A817C"
@@ -962,6 +960,7 @@ function FoodResultCard({
         <Text style={styles.quantityLabel}>Quantity</Text>
         <TextInput
           ref={onInputRef}
+          maxLength={100}
           onChangeText={(value) => onUpdate("quantity", value)}
           placeholder="e.g. 2 portions"
           placeholderTextColor="#7A817C"

@@ -8,6 +8,7 @@ import type {
 type CacheEntry<T> = {
   data?: T;
   promise?: Promise<T>;
+  revision?: number;
 };
 
 const entries = {
@@ -32,23 +33,31 @@ export const loadScreenCache = async <T>(
   if (!force && entry.data !== undefined) return entry.data;
   if (entry.promise) return entry.promise;
 
-  entry.promise = fetcher()
-    .then((data) => {
+  const requestRevision = entry.revision ?? 0;
+  const requestPromise = fetcher().then((data) => {
+    if ((entry.revision ?? 0) === requestRevision) {
       entry.data = data;
       return data;
-    })
-    .finally(() => {
-      entry.promise = undefined;
-    });
-  return entry.promise;
+    }
+    return entry.data ?? data;
+  });
+  entry.promise = requestPromise;
+  try {
+    return await requestPromise;
+  } finally {
+    if (entry.promise === requestPromise) entry.promise = undefined;
+  }
 };
 
 export const updateScreenCache = <T>(key: ScreenCacheKey, data: T) => {
-  (entries[key] as CacheEntry<T>).data = data;
+  const entry = entries[key] as CacheEntry<T>;
+  entry.revision = (entry.revision ?? 0) + 1;
+  entry.data = data;
 };
 
 export const clearScreenCache = () => {
   Object.values(entries).forEach((entry) => {
+    entry.revision = (entry.revision ?? 0) + 1;
     entry.data = undefined;
     entry.promise = undefined;
   });

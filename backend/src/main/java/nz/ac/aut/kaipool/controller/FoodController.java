@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Size;
 import nz.ac.aut.kaipool.dto.CreateFoodRequest;
 import nz.ac.aut.kaipool.dto.FoodResponse;
 import nz.ac.aut.kaipool.dto.MarketplaceFoodResponse;
@@ -60,6 +61,14 @@ public class FoodController {
     @ResponseStatus(HttpStatus.CREATED)
     public FoodResponse createFood(Principal principal, @Valid @RequestBody CreateFoodRequest request) {
         return foodService.createFood(principal.getName(), request);
+    }
+
+    @PostMapping("/bulk")
+    @ResponseStatus(HttpStatus.CREATED)
+    public List<FoodResponse> createFoods(
+            Principal principal,
+            @RequestBody @Size(min = 1, max = 50) List<@Valid CreateFoodRequest> requests) {
+        return foodService.createFoods(principal.getName(), requests);
     }
 
     @GetMapping("/{id}")

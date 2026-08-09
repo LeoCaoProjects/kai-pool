@@ -46,6 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     setUnauthorizedHandler(() => {
       clearScreenCache();
+      setApiToken(null);
       setUser(null);
       void AsyncStorage.multiRemove([ACCESS_TOKEN_KEY, AUTH_USER_KEY]);
     });
@@ -96,6 +97,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     void restoreSession();
   }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    const expectedUserId = user.id;
+    const reconcileStoredToken = async () => {
+      const token = await AsyncStorage.getItem(ACCESS_TOKEN_KEY);
+      if (token) {
+        setApiToken(token);
+        return;
+      }
+      clearScreenCache();
+      setApiToken(null);
+      setUser((current) =>
+        current?.id === expectedUserId ? null : current,
+      );
+      await AsyncStorage.removeItem(AUTH_USER_KEY);
+    };
+    void reconcileStoredToken();
+  }, [user?.id]);
 
   const saveSession = async (token: string, authenticatedUser: User) => {
     clearScreenCache();
