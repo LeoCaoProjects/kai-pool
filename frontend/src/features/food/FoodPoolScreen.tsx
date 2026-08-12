@@ -377,7 +377,12 @@ export default function FoodPoolScreen({
           </Pressable>
         ) : null}
         {loading ? (
-          <ActivityIndicator color={colors.primary} style={styles.loader} />
+          <View style={styles.foodSkeletonList}>
+            <FoodRowSkeleton />
+            <FoodRowSkeleton />
+            <FoodRowSkeleton />
+            <FoodRowSkeleton />
+          </View>
         ) : null}
         {!loading && !error && foods.length === 0 ? (
           <View style={styles.empty}>
@@ -596,6 +601,28 @@ export default function FoodPoolScreen({
   );
 }
 
+function FoodRowSkeleton() {
+  const pulse = useRef(new Animated.Value(0.55)).current;
+  useEffect(() => {
+    const animation = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1, duration: 760, useNativeDriver: true }),
+      Animated.timing(pulse, { toValue: 0.55, duration: 760, useNativeDriver: true }),
+    ]));
+    animation.start();
+    return () => animation.stop();
+  }, [pulse]);
+  return (
+    <Animated.View style={[styles.foodSkeletonRow, { opacity: pulse }]}>
+      <View style={styles.foodSkeletonIcon} />
+      <View style={styles.foodSkeletonCopy}>
+        <View style={styles.foodSkeletonName} />
+        <View style={styles.foodSkeletonDate} />
+      </View>
+      <View style={styles.foodSkeletonBadge} />
+    </Animated.View>
+  );
+}
+
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
     <View style={styles.field}>
@@ -793,6 +820,28 @@ const styles = StyleSheet.create({
   },
   error: { marginHorizontal: 20, ...sharedStyles.errorBox },
   loader: { marginTop: 48 },
+  foodSkeletonList: { gap: 10 },
+  foodSkeletonRow: {
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderColor: colors.surfaceHigh,
+    borderRadius: 18,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: 12,
+    minHeight: 76,
+    padding: 12,
+  },
+  foodSkeletonIcon: {
+    backgroundColor: "#E2E6E0",
+    borderRadius: 13,
+    height: 44,
+    width: 44,
+  },
+  foodSkeletonCopy: { flex: 1, gap: 8 },
+  foodSkeletonName: { backgroundColor: "#E2E6E0", borderRadius: 5, height: 16, width: "58%" },
+  foodSkeletonDate: { backgroundColor: "#ECEFEA", borderRadius: 4, height: 11, width: "34%" },
+  foodSkeletonBadge: { backgroundColor: "#E7EAE5", borderRadius: 12, height: 28, width: 78 },
   listSection: { paddingHorizontal: 20, paddingTop: 4 },
   listHeading: {
     alignItems: "center",

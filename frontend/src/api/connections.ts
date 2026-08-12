@@ -1,5 +1,5 @@
 import type { CookingConnection, MeetingArrangement } from "../types/models";
-import { apiRequest } from "./client";
+import { ApiError, apiRequest } from "./client";
 
 export const getCookingConnections = () =>
   apiRequest<CookingConnection[]>("/api/cooking-connections");
@@ -16,11 +16,25 @@ export const requestCookingConnection = (recipientId: number) =>
 export const respondToCookingConnection = (
   id: number,
   status: "ACCEPTED" | "DECLINED",
-) =>
-  apiRequest<CookingConnection>(`/api/cooking-connections/${id}/response`, {
+) => respond(id, status);
+
+const respond = async (
+  id: number,
+  status: "ACCEPTED" | "DECLINED",
+  retry = true,
+): Promise<CookingConnection> => {
+  try {
+    return await apiRequest<CookingConnection>(`/api/cooking-connections/${id}/response`, {
     method: "PUT",
     body: JSON.stringify({ status }),
   });
+  } catch (error) {
+    if (retry && error instanceof ApiError && error.status === 500) {
+      return respond(id, status, false);
+    }
+    throw error;
+  }
+};
 
 export const updateMeetingArrangement = (
   id: number,

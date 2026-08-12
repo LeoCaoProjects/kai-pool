@@ -22,6 +22,7 @@ import nz.ac.aut.kaipool.dto.FoodContributionResponse;
 import nz.ac.aut.kaipool.dto.MealPreviewResponse;
 import nz.ac.aut.kaipool.exception.ResourceNotFoundException;
 import nz.ac.aut.kaipool.repository.FoodRepository;
+import nz.ac.aut.kaipool.repository.CookingConnectionRepository;
 import nz.ac.aut.kaipool.repository.UserRepository;
 import nz.ac.aut.kaipool.service.CollaborativeMealCatalog.ScoredMeal;
 import nz.ac.aut.kaipool.service.MatchMealSuggestionService.SuggestionRequest;
@@ -32,6 +33,7 @@ public class MatchingService {
 
     private final CollaborativeMealCatalog mealCatalog;
     private final FoodRepository foodRepository;
+    private final CookingConnectionRepository connectionRepository;
     private final UserRepository userRepository;
     private final UserService userService;
     private final MatchMealSuggestionService mealSuggestionService;
@@ -40,12 +42,14 @@ public class MatchingService {
     public MatchingService(
             CollaborativeMealCatalog mealCatalog,
             FoodRepository foodRepository,
+            CookingConnectionRepository connectionRepository,
             UserRepository userRepository,
             UserService userService,
             MatchMealSuggestionService mealSuggestionService,
             @Value("${app.matching.max-distance-km:30}") double maxDistanceKm) {
         this.mealCatalog = mealCatalog;
         this.foodRepository = foodRepository;
+        this.connectionRepository = connectionRepository;
         this.userRepository = userRepository;
         this.userService = userService;
         this.mealSuggestionService = mealSuggestionService;
@@ -54,7 +58,16 @@ public class MatchingService {
 
     @Transactional(readOnly = true)
     public List<CookingMatchResponse> findMatches(String email) {
-        return findMatchContexts(email).stream().map(MatchContext::response).toList();
+        User viewer = userService.getRequiredByEmail(email);
+        Set<Long> unavailableUserIds = connectionRepository.findAllForUser(viewer.getId()).stream()
+                .filter(connection -> connection.getStatus() != nz.ac.aut.kaipool.domain.CookingConnectionStatus.DECLINED)
+                .map(connection -> connection.getRequester().getId().equals(viewer.getId())
+                        ? connection.getRecipient().getId()
+                        : connection.getRequester().getId())
+                .collect(Collectors.toSet());
+        return findMatchContexts(email, unavailableUserIds, 10).stream()
+                .map(MatchContext::response)
+                .toList();
     }
 
     @Transactional(readOnly = true)
@@ -70,7 +83,37 @@ public class MatchingService {
         return getRequiredMatch(email, matchedUserId).response();
     }
 
+    @Transactional(readOnly = true)
+    public User getRequiredEligibleUser(String email, Long matchedUserId) {
+        User currentUser = userService.getRequiredByEmail(email);
+        User candidate = userRepository.findById(matchedUserId)
+                .orElseThrow(() -> new ResourceNotFoundException("Cooking match not found"));
+        if (currentUser.getId().equals(candidate.getId()) || !hasLocation(currentUser) || !hasLocation(candidate)) {
+            throw new ResourceNotFoundException("Cooking match not found");
+        }
+        double distance = GeoUtils.distanceKm(
+                currentUser.getLatitude(), currentUser.getLongitude(),
+                candidate.getLatitude(), candidate.getLongitude());
+        if (distance > maxDistanceKm) {
+            throw new ResourceNotFoundException("Cooking match not found");
+        }
+        List<Food> currentFoods = foodRepository.findByOwnerIdAndAvailabilityOrderByCreatedAtDesc(
+                currentUser.getId(), FoodAvailability.COOK_TOGETHER);
+        List<Food> candidateFoods = foodRepository.findByOwnerIdAndAvailabilityOrderByCreatedAtDesc(
+                candidate.getId(), FoodAvailability.COOK_TOGETHER);
+        if (currentFoods.isEmpty() || candidateFoods.isEmpty()
+                || mealCatalog.findUsefulMeals(
+                        currentFoods, candidateFoods, selectedCultures(currentUser, candidate), 1).isEmpty()) {
+            throw new ResourceNotFoundException("Cooking match not found");
+        }
+        return candidate;
+    }
+
     private List<MatchContext> findMatchContexts(String email) {
+        return findMatchContexts(email, Set.of(), Integer.MAX_VALUE);
+    }
+
+    private List<MatchContext> findMatchContexts(String email, Set<Long> excludedUserIds, int limit) {
         User currentUser = userService.getRequiredByEmail(email);
         if (!hasLocation(currentUser)) {
             return List.of();
@@ -87,7 +130,8 @@ public class MatchingService {
 
         List<NearbyCandidate> nearbyCandidates = new ArrayList<>();
         for (User candidate : userRepository.findAllWithCultures()) {
-            if (candidate.getId().equals(currentUser.getId()) || !hasLocation(candidate)) {
+            if (candidate.getId().equals(currentUser.getId())
+                    || excludedUserIds.contains(candidate.getId()) || !hasLocation(candidate)) {
                 continue;
             }
             double distance = GeoUtils.distanceKm(
@@ -121,6 +165,16 @@ public class MatchingService {
             prepared.add(new PreparedCandidate(candidate, candidateFoods, distance, usefulMeals));
         }
 
+        // Rank and cap candidates before the expensive Gemini/Pexels stage. This
+        // keeps Discover to one small batch even when many users are nearby.
+        prepared = prepared.stream()
+                .sorted(Comparator
+                        .comparingDouble((PreparedCandidate item) -> item.usefulMeals().getFirst().score()).reversed()
+                        .thenComparingDouble(PreparedCandidate::distance)
+                        .thenComparing(item -> item.user().getName()))
+                .limit(limit)
+                .toList();
+
         Map<Long, CollaborativeMealResponse> suggestions = mealSuggestionService.suggest(prepared.stream()
                 .map(item -> new SuggestionRequest(currentUser.getId(), item.user().getId(), currentFoods, item.foods(),
                         selectedCultures(currentUser, currentUser), selectedCultures(item.user(), item.user()),
@@ -138,7 +192,6 @@ public class MatchingService {
                 .sorted(Comparator.comparingInt((MatchContext context) -> context.response().matchScore()).reversed()
                         .thenComparingDouble(context -> context.response().distanceKm())
                         .thenComparing(context -> context.response().matchedUserName()))
-                .limit(10)
                 .toList();
         return result;
     }

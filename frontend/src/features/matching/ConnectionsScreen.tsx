@@ -17,6 +17,7 @@ export default function ConnectionsScreen() {
           initialMode="requests"
           modes={["requests", "connections"]}
           showHeader={false}
+          stickyTabs
         />
       </View>
     </View>
