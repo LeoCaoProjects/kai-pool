@@ -25,7 +25,7 @@ export default function WelcomeScreen() {
       </View>
       <View style={styles.actions}>
         <Pressable
-          onPress={() => router.push("/register")}
+          onPress={() => router.push({ pathname: "/login", params: { mode: "register" } })}
           style={sharedStyles.primaryButton}
         >
           <Text style={sharedStyles.primaryButtonText}>Join Kai Pool</Text>
