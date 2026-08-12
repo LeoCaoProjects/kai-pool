@@ -137,7 +137,7 @@ class CollaborativeRecipeServiceTests {
                 List.of("Spring onion"),
                 List.of("Prepare ingredients.", "Cook thoroughly.", "Combine and serve."),
                 "https://example.com/meal.jpg",
-                "Test",
-                "Test photo");
+                "Pexels",
+                "Photo by Test on Pexels");
     }
 }

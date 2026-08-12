@@ -1,3 +1,4 @@
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import type {
   CookingConnection,
   CookingMatch,
@@ -22,6 +23,38 @@ const entries = {
 export type ScreenCacheKey = keyof typeof entries;
 
 const listeners = new Map<ScreenCacheKey, Set<() => void>>();
+const CACHE_PREFIX = "kai-pool-screen-cache-v4";
+let cacheOwnerId: number | null = null;
+
+const storageKey = (ownerId: number) => `${CACHE_PREFIX}:${ownerId}`;
+
+const persistScreenCache = () => {
+  if (cacheOwnerId == null) return;
+  const data = Object.fromEntries(
+    Object.entries(entries).map(([key, entry]) => [key, entry.data]),
+  );
+  void AsyncStorage.setItem(storageKey(cacheOwnerId), JSON.stringify(data));
+};
+
+export const hydrateScreenCache = async (ownerId: number) => {
+  cacheOwnerId = ownerId;
+  const stored = await AsyncStorage.getItem(storageKey(ownerId));
+  if (!stored) return;
+  try {
+    const data = JSON.parse(stored) as Partial<
+      Record<ScreenCacheKey, unknown>
+    >;
+    (Object.keys(entries) as ScreenCacheKey[]).forEach((key) => {
+      if (data[key] !== undefined) entries[key].data = data[key] as never;
+    });
+  } catch {
+    await AsyncStorage.removeItem(storageKey(ownerId));
+  }
+};
+
+export const setScreenCacheOwner = (ownerId: number) => {
+  cacheOwnerId = ownerId;
+};
 
 const notifyScreenCache = (key: ScreenCacheKey) => {
   listeners.get(key)?.forEach((listener) => listener());
@@ -55,6 +88,7 @@ export const loadScreenCache = async <T>(
   const requestPromise = fetcher().then((data) => {
     if ((entry.revision ?? 0) === requestRevision) {
       entry.data = data;
+      persistScreenCache();
       notifyScreenCache(key);
       return data;
     }
@@ -72,10 +106,13 @@ export const updateScreenCache = <T>(key: ScreenCacheKey, data: T) => {
   const entry = entries[key] as CacheEntry<T>;
   entry.revision = (entry.revision ?? 0) + 1;
   entry.data = data;
+  persistScreenCache();
   notifyScreenCache(key);
 };
 
 export const clearScreenCache = () => {
+  const previousOwnerId = cacheOwnerId;
+  cacheOwnerId = null;
   Object.values(entries).forEach((entry) => {
     entry.revision = (entry.revision ?? 0) + 1;
     entry.data = undefined;
@@ -84,4 +121,7 @@ export const clearScreenCache = () => {
   listeners.forEach((keyListeners) =>
     keyListeners.forEach((listener) => listener()),
   );
+  if (previousOwnerId != null) {
+    void AsyncStorage.removeItem(storageKey(previousOwnerId));
+  }
 };

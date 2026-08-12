@@ -2,68 +2,32 @@ package nz.ac.aut.kaipool.service;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
-import java.util.stream.Stream;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import nz.ac.aut.kaipool.dto.CollaborativeMealResponse;
-import nz.ac.aut.kaipool.service.CloudflareMealImageClient.GeneratedMealImage;
-import nz.ac.aut.kaipool.service.MealVisualCatalog.MealVisual;
-import nz.ac.aut.kaipool.service.TheMealDbImageClient.ExternalMealImage;
+import nz.ac.aut.kaipool.service.PexelsMealImageClient.PexelsMealImage;
 
 @Service
 public class MealVisualService {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(MealVisualService.class);
-
-    private final TheMealDbImageClient theMealDbClient;
-    private final CloudflareMealImageClient cloudflareClient;
-    private final MealImageAssetService imageAssetService;
+    private final PexelsMealImageLookup pexelsLookup;
     private final MealVisualCatalog visualCatalog;
 
     public MealVisualService(
-            TheMealDbImageClient theMealDbClient,
-            CloudflareMealImageClient cloudflareClient,
-            MealImageAssetService imageAssetService,
+            PexelsMealImageLookup pexelsLookup,
             MealVisualCatalog visualCatalog) {
-        this.theMealDbClient = theMealDbClient;
-        this.cloudflareClient = cloudflareClient;
-        this.imageAssetService = imageAssetService;
+        this.pexelsLookup = pexelsLookup;
         this.visualCatalog = visualCatalog;
     }
 
     public List<CollaborativeMealResponse> addImages(List<CollaborativeMealResponse> meals) {
         List<CollaborativeMealResponse> enriched = new ArrayList<>();
-        boolean generatedOneImage = false;
         for (CollaborativeMealResponse meal : meals) {
-            Optional<ExternalMealImage> external = theMealDbClient.findRelevantImage(
-                    meal.mealName(), combinedIngredients(meal));
-            if (external.isPresent()) {
-                ExternalMealImage image = external.get();
-                enriched.add(withVisual(meal, image.imageUrl(), image.source(), image.attribution()));
-                continue;
-            }
-
-            if (!generatedOneImage && cloudflareClient.isConfigured()) {
-                Optional<GeneratedMealImage> generated = cloudflareClient.generate(meal);
-                if (generated.isPresent()) {
-                    try {
-                        GeneratedMealImage image = generated.get();
-                        String imageUrl = imageAssetService.store(meal.mealName(), image.contentType(), image.bytes());
-                        enriched.add(withVisual(meal, imageUrl, "Cloudflare Workers AI", "AI-generated for Kai Pool"));
-                        generatedOneImage = true;
-                        continue;
-                    } catch (RuntimeException exception) {
-                        LOGGER.warn("Could not store generated image for {}", meal.mealName());
-                    }
-                }
-            }
-
-            MealVisual fallback = visualCatalog.forMeal(meal.mealName());
-            enriched.add(withVisual(meal, fallback.imageUrl(), fallback.source(), fallback.attribution()));
+            PexelsMealImage image = pexelsLookup.find(meal.mealName()).orElse(null);
+            enriched.add(image == null
+                    ? withVisual(meal, null, null, null)
+                    : withVisual(meal, image.imageUrl(), "Pexels", image.attribution()));
         }
         return List.copyOf(enriched);
     }
@@ -87,12 +51,5 @@ public class MealVisualService {
                 imageUrl,
                 source,
                 attribution);
-    }
-
-    private static List<String> combinedIngredients(CollaborativeMealResponse meal) {
-        return Stream.concat(meal.ingredientsFromYou().stream(), meal.ingredientsFromThem().stream())
-                .distinct()
-                .limit(12)
-                .toList();
     }
 }

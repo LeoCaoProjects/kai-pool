@@ -26,6 +26,8 @@ import {
 } from "../../api/screenCache";
 import type { CookingConnection, CookingMatch } from "../../types/models";
 import { colors, sharedStyles } from "../../ui/theme";
+import { buildApiUrl } from "../../config/api";
+import { LinearGradient } from "expo-linear-gradient";
 import { useAuth } from "../auth/AuthContext";
 import { PersonSummary } from "./MatchingComponents";
 
@@ -102,6 +104,7 @@ export function MatchesScreen({
       ),
     [connections],
   );
+  const variedMatches = useMemo(() => diversifyMatches(matches), [matches]);
   const send = async (match: CookingMatch) => {
     setBusyId(match.matchedUserId);
     try {
@@ -151,7 +154,7 @@ export function MatchesScreen({
       setBusyId(null);
     }
   };
-  if (loading)
+  if (loading && showHeader)
     return (
       <View style={styles.center}>
         <ActivityIndicator color={colors.primary} />
@@ -229,7 +232,21 @@ export function MatchesScreen({
       ) : null}
       {!error && mode === "discover" ? (
         <>
-          {matches.length === 0 ? (
+          {loading && variedMatches.length === 0 ? (
+            <View style={styles.inlineLoading}>
+              <ActivityIndicator color={colors.primary} size="small" />
+              <Text style={styles.inlineLoadingText}>Finding nearby cooks</Text>
+            </View>
+          ) : null}
+          {variedMatches.length > 0 ? (
+            <View style={styles.listHeading}>
+              <Text style={styles.listEyebrow}>NEARBY COOKS</Text>
+              <Text style={styles.listCount}>
+                {variedMatches.length} match{variedMatches.length === 1 ? "" : "es"}
+              </Text>
+            </View>
+          ) : null}
+          {!loading && variedMatches.length === 0 ? (
             <Empty
               text={
                 user?.latitude == null
@@ -238,14 +255,18 @@ export function MatchesScreen({
               }
             />
           ) : (
-            matches.map((match, index) => (
+            variedMatches.map((match) => (
               <MatchCard
                 key={match.matchedUserId}
                 match={match}
-                rank={index + 1}
                 existing={connectionByUser.get(match.matchedUserId)}
                 busy={busyId === match.matchedUserId}
-                onDetails={() => router.push(`/match/${match.matchedUserId}`)}
+                onDetails={() =>
+                  router.push({
+                    pathname: "/match/[matchedUserId]",
+                    params: { matchedUserId: String(match.matchedUserId) },
+                  })
+                }
                 onRequest={() => void send(match)}
               />
             ))
@@ -318,65 +339,65 @@ export function MatchesScreen({
 
 function MatchCard({
   match,
-  rank,
   existing,
   busy,
   onDetails,
   onRequest,
 }: {
   match: CookingMatch;
-  rank: number;
   existing?: CookingConnection;
   busy: boolean;
   onDetails: () => void;
   onRequest: () => void;
 }) {
   const meal = match.possibleMeals[0];
-  if (!meal) return null;
+  const mealImage = meal?.imageUrl && meal.imageSource === "Pexels"
+    ? meal.imageUrl.startsWith("/")
+      ? buildApiUrl(meal.imageUrl)
+      : meal.imageUrl
+    : null;
   return (
     <View style={styles.matchCard}>
-      <View style={styles.cardBody}>
-        <View style={styles.meta}>
-          <Text style={styles.rank}>#{rank} match</Text>
-          <Text style={styles.distance}>
-            About {match.distanceKm.toFixed(1)} km away
-          </Text>
-        </View>
-        <PersonSummary
-          name={match.matchedUserName}
-          bio={match.matchedUserBio}
-          profileImageUrl={match.matchedUserProfileImageUrl}
-          cultures={match.matchedUserFoodCultures}
-        />
-        <Ingredient
-          label="THEY HAVE"
-          value={match.theirContributions
-            .map((food) =>
-              food.quantity ? `${food.name} (${food.quantity})` : food.name,
-            )
-            .join(" · ")}
-        />
-        <Ingredient
-          label="YOU MATCH WITH"
-          value={match.yourContributions
-            .map((food) =>
-              food.quantity ? `${food.name} (${food.quantity})` : food.name,
-            )
-            .join(" · ")}
-        />
-        <View style={styles.mealRow}>
-          {meal.imageUrl ? (
-            <Image source={{ uri: meal.imageUrl }} style={styles.mealImage} />
+      {meal ? (
+        <View style={styles.mealFeature}>
+          {mealImage ? (
+            <Image source={{ uri: mealImage }} style={styles.mealImage} />
           ) : (
-            <View style={styles.mealImage} />
+            <View style={[styles.mealImage, styles.mealImageFallback]}>
+              <Ionicons color="#506AA8" name="restaurant-outline" size={28} />
+            </View>
           )}
-          <View style={styles.mealCopy}>
-            <Text style={styles.sectionLabel}>SUGGESTED MEAL</Text>
-            <Text style={styles.mealName}>{meal.mealName}</Text>
-            <Text numberOfLines={2} style={styles.mealDescription}>
-              {meal.description}
+          <LinearGradient
+            colors={["rgba(10,24,17,0.42)", "transparent", "rgba(10,24,17,0.92)"]}
+            locations={[0, 0.42, 1]}
+            pointerEvents="none"
+            style={styles.mealGradient}
+          >
+            <View style={styles.imageMetaRow}>
+              <View style={styles.imageMetaPill}>
+                <Ionicons color="#FFFFFF" name="location-outline" size={13} />
+                <Text style={styles.imageMetaText}>{match.distanceKm.toFixed(1)} km</Text>
+              </View>
+              <View style={styles.imageMetaPill}>
+                <Ionicons color="#FFFFFF" name="sparkles-outline" size={13} />
+                <Text style={styles.imageMetaText}>{match.matchScore}% match</Text>
+              </View>
+            </View>
+            <View style={styles.mealTitleBlock}>
+              <Text numberOfLines={2} style={styles.mealName}>{meal.mealName}</Text>
+              <Text style={styles.mealDescription}>{meal.culturalOrigin}</Text>
+            </View>
+          </LinearGradient>
+        </View>
+      ) : null}
+      <View style={styles.cardBody}>
+        <View style={styles.cookIdentity}>
+          <Text numberOfLines={1} style={styles.cookName}>Cook with {match.matchedUserName}</Text>
+          {match.matchedUserFoodCultures.length > 0 ? (
+            <Text numberOfLines={1} style={styles.cookCultures}>
+              {match.matchedUserFoodCultures.slice(0, 3).join(" · ")}
             </Text>
-          </View>
+          ) : null}
         </View>
         <View style={styles.actions}>
           <Secondary title="Details" onPress={onDetails} />
@@ -397,13 +418,57 @@ function MatchCard({
     </View>
   );
 }
-function Ingredient({ label, value }: { label: string; value: string }) {
+function RemovedIngredientLayout({
+  label,
+  foods,
+  tone,
+}: {
+  label: string;
+  foods: CookingMatch["yourContributions"];
+  tone: "you" | "them";
+}) {
   return (
     <View style={styles.ingredient}>
-      <Text style={styles.sectionLabel}>{label}</Text>
-      <Text style={styles.ingredientText}>{value}</Text>
+      <View style={[styles.ingredientMark, tone === "you" ? styles.yourMark : styles.theirMark]} />
+      <View style={styles.ingredientCopy}>
+        <Text style={styles.sectionLabel}>{label}</Text>
+        <Text numberOfLines={2} style={styles.ingredientText}>
+          {foods.slice(0, 4).map((food) =>
+            food.quantity ? `${food.name} (${food.quantity})` : food.name,
+          ).join(" · ")}
+        </Text>
+      </View>
     </View>
   );
+}
+
+void RemovedIngredientLayout;
+
+function diversifyMatches(matches: CookingMatch[]) {
+  const usedMeals = new Set<string>();
+  const seenUsers = new Set<number>();
+  return matches.flatMap((match) => {
+    if (seenUsers.has(match.matchedUserId)) return [];
+    seenUsers.add(match.matchedUserId);
+    const uniqueMeals = [...new Map(
+      match.possibleMeals.map((meal) => [meal.mealName.trim().toLowerCase(), meal]),
+    ).values()];
+    const freshIndex = uniqueMeals.findIndex(
+      (meal) => !usedMeals.has(meal.mealName.trim().toLowerCase()),
+    );
+    if (freshIndex > 0) {
+      uniqueMeals.unshift(...uniqueMeals.splice(freshIndex, 1));
+    }
+    if (uniqueMeals[0]) usedMeals.add(uniqueMeals[0].mealName.trim().toLowerCase());
+    const dedupeFoods = (foods: CookingMatch["yourContributions"]) =>
+      [...new Map(foods.map((food) => [food.name.trim().toLowerCase(), food])).values()];
+    return [{
+      ...match,
+      possibleMeals: uniqueMeals,
+      yourContributions: dedupeFoods(match.yourContributions),
+      theirContributions: dedupeFoods(match.theirContributions),
+    }];
+  });
 }
 function Primary({
   title,
@@ -465,6 +530,23 @@ const styles = StyleSheet.create({
     paddingBottom: 48,
   },
   embeddedContent: { paddingTop: 12 },
+  listHeading: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingHorizontal: 2,
+  },
+  listEyebrow: {
+    color: colors.secondary,
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 11,
+    letterSpacing: 1,
+  },
+  listCount: {
+    color: colors.textMuted,
+    fontFamily: "Inter_500Medium",
+    fontSize: 12,
+  },
   center: {
     alignItems: "center",
     backgroundColor: colors.background,
@@ -476,6 +558,18 @@ const styles = StyleSheet.create({
     color: colors.primary,
     fontFamily: "Inter_600SemiBold",
     fontSize: 15,
+  },
+  inlineLoading: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 9,
+    paddingHorizontal: 2,
+    paddingVertical: 12,
+  },
+  inlineLoadingText: {
+    color: colors.textMuted,
+    fontFamily: "Inter_500Medium",
+    fontSize: 13,
   },
   header: { gap: 4 },
   subtitle: {
@@ -509,22 +603,42 @@ const styles = StyleSheet.create({
   matchCard: {
     backgroundColor: colors.surface,
     borderColor: colors.surfaceHigh,
+    borderRadius: 22,
+    borderWidth: 1,
+    overflow: "hidden",
+  },
+  cardBody: { gap: 14, padding: 15 },
+  cookIdentity: { gap: 3, paddingHorizontal: 2 },
+  cookName: {
+    color: colors.text,
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 16,
+  },
+  cookCultures: {
+    color: colors.textMuted,
+    fontFamily: "Inter_400Regular",
+    fontSize: 12,
+  },
+  matchMeta: { alignItems: "center", flexDirection: "row", gap: 14 },
+  metaItem: { alignItems: "center", flexDirection: "row", gap: 5 },
+  metaText: {
+    color: colors.textMuted,
+    fontFamily: "Inter_400Regular",
+    fontSize: 11,
+  },
+  cardFooter: { gap: 15, padding: 16 },
+  ingredientsList: {
+    borderColor: colors.surfaceHigh,
     borderRadius: 16,
     borderWidth: 1,
+    paddingHorizontal: 13,
   },
-  cardBody: { gap: 16, padding: 16 },
-  meta: { flexDirection: "row", justifyContent: "space-between" },
-  rank: {
-    color: colors.secondary,
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 12,
-  },
-  distance: {
-    color: colors.secondary,
-    fontFamily: "Inter_500Medium",
-    fontSize: 12,
-  },
-  ingredient: { gap: 4 },
+  ingredient: { alignItems: "center", flexDirection: "row", gap: 10, paddingVertical: 11 },
+  ingredientMark: { borderRadius: 5, height: 10, width: 10 },
+  yourMark: { backgroundColor: colors.primary },
+  theirMark: { backgroundColor: colors.accent },
+  ingredientCopy: { flex: 1, gap: 3 },
+  ingredientDivider: { backgroundColor: colors.surfaceHigh, height: 1 },
   sectionLabel: {
     color: colors.secondary,
     fontFamily: "Inter_600SemiBold",
@@ -534,42 +648,69 @@ const styles = StyleSheet.create({
   ingredientText: {
     color: colors.text,
     fontFamily: "Inter_400Regular",
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  mealRow: {
-    backgroundColor: colors.surfaceLow,
-    borderRadius: 12,
-    flexDirection: "row",
-    gap: 12,
-    padding: 8,
-  },
-  mealImage: {
-    backgroundColor: colors.surfaceHigh,
-    borderRadius: 8,
-    height: 82,
-    width: 82,
-  },
-  mealCopy: { flex: 1, gap: 2, justifyContent: "center" },
-  mealName: {
-    color: colors.primary,
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 16,
-  },
-  mealDescription: {
-    color: colors.textMuted,
-    fontFamily: "Inter_400Regular",
     fontSize: 12,
     lineHeight: 17,
   },
-  actions: { flexDirection: "row", gap: 8 },
+  mealFeature: { backgroundColor: colors.surfaceLow, position: "relative" },
+  mealImage: { backgroundColor: colors.surfaceHigh, height: 292, width: "100%" },
+  mealImageFallback: { alignItems: "center", justifyContent: "center" },
+  mealGradient: {
+    bottom: 0,
+    justifyContent: "space-between",
+    left: 0,
+    padding: 15,
+    position: "absolute",
+    right: 0,
+    top: 0,
+  },
+  mealName: {
+    color: "#FFFFFF",
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 25,
+    lineHeight: 29,
+  },
+  imageMetaRow: { flexDirection: "row", gap: 7 },
+  imageMetaPill: {
+    alignItems: "center",
+    backgroundColor: "rgba(13, 28, 20, 0.72)",
+    borderRadius: 14,
+    flexDirection: "row",
+    gap: 4,
+    minHeight: 28,
+    paddingHorizontal: 9,
+  },
+  imageMetaText: {
+    color: "#FFFFFF",
+    fontFamily: "Inter_500Medium",
+    fontSize: 11,
+  },
+  mealTitleBlock: { gap: 3 },
+  mealAttribution: {
+    color: colors.textMuted,
+    fontFamily: "Inter_400Regular",
+    fontSize: 9,
+    paddingHorizontal: 8,
+    position: "absolute",
+    right: 0,
+    textShadowColor: "#000000",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+    top: 4,
+  },
+  mealDescription: {
+    color: "#F0EEE7",
+    fontFamily: "Inter_400Regular",
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  actions: { flexDirection: "row", gap: 9, marginTop: 2 },
   primary: {
     alignItems: "center",
     backgroundColor: colors.primary,
-    borderRadius: 12,
+    borderRadius: 14,
     flex: 1,
     justifyContent: "center",
-    minHeight: 48,
+    minHeight: 46,
     paddingHorizontal: 10,
   },
   primaryText: {
@@ -580,10 +721,12 @@ const styles = StyleSheet.create({
   secondary: {
     alignItems: "center",
     backgroundColor: colors.secondaryContainer,
-    borderRadius: 12,
+    borderColor: colors.surfaceHigh,
+    borderRadius: 14,
+    borderWidth: 1,
     flex: 1,
     justifyContent: "center",
-    minHeight: 48,
+    minHeight: 46,
     paddingHorizontal: 10,
   },
   secondaryText: {

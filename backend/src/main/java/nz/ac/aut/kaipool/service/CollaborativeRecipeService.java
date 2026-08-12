@@ -52,7 +52,14 @@ public class CollaborativeRecipeService {
 
         var cached = recipeCache.get(request);
         if (cached.isPresent()) {
-            return reverseForRequester ? flipOwnership(cached.get()) : cached.get();
+            List<CollaborativeMealResponse> stored = cached.get();
+            if (stored.stream().allMatch(meal -> "Pexels".equals(meal.imageSource())
+                    && meal.imageUrl() != null && !meal.imageUrl().isBlank())) {
+                return reverseForRequester ? flipOwnership(stored) : stored;
+            }
+            List<CollaborativeMealResponse> enriched = mealVisualService.addImages(stored);
+            recipeCache.put(request, enriched);
+            return reverseForRequester ? flipOwnership(enriched) : enriched;
         }
 
         List<CollaborativeMealResponse> generated;

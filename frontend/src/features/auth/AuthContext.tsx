@@ -20,7 +20,11 @@ import {
   setUnauthorizedHandler,
 } from "../../api/client";
 import { updateCurrentUser as updateCurrentUserRequest } from "../../api/users";
-import { clearScreenCache } from "../../api/screenCache";
+import {
+  clearScreenCache,
+  hydrateScreenCache,
+  setScreenCacheOwner,
+} from "../../api/screenCache";
 import type { User } from "../../types/models";
 import type {
   LoginRequest,
@@ -68,6 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (cachedUserJson) {
         try {
           cachedUser = JSON.parse(cachedUserJson) as User;
+          await hydrateScreenCache(cachedUser.id);
           setUser(cachedUser);
         } catch {
           await AsyncStorage.removeItem(AUTH_USER_KEY);
@@ -119,6 +124,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const saveSession = async (token: string, authenticatedUser: User) => {
     clearScreenCache();
+    setScreenCacheOwner(authenticatedUser.id);
     setApiToken(token);
     await AsyncStorage.multiSet([
       [ACCESS_TOKEN_KEY, token],

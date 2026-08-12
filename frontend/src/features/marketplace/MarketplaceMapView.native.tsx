@@ -204,23 +204,31 @@ export default function MarketplaceMapView({
             tracksViewChanges
             zIndex={2}
           >
-            <Animated.View
-              style={[
-                styles.markerShadow,
-                selected && styles.markerShadowSelected,
-                { transform: [{ scale: markerScale }] },
-              ]}
-            >
-              <View style={[styles.marker, selected && styles.markerSelected]}>
-                <Text style={styles.markerInitial}>
-                  {owner.ownerName.charAt(0).toUpperCase()}
-                </Text>
-              </View>
-              <View style={styles.count}>
-                <Ionicons color="#FFFFFF" name="gift" size={9} />
-                <Text style={styles.countText}>{owner.items.length}</Text>
-              </View>
-            </Animated.View>
+            <View collapsable={false} style={styles.markerCanvas}>
+              <Animated.View
+                style={[
+                  styles.markerVisual,
+                  { transform: [{ scale: markerScale }] },
+                ]}
+              >
+                <View
+                  style={[
+                    styles.markerShadow,
+                    selected && styles.markerShadowSelected,
+                  ]}
+                >
+                  <View style={[styles.marker, selected && styles.markerSelected]}>
+                    <Text style={styles.markerInitial}>
+                      {owner.ownerName.charAt(0).toUpperCase()}
+                    </Text>
+                  </View>
+                </View>
+                <View style={styles.count}>
+                  <Ionicons color="#FFFFFF" name="gift" size={9} />
+                  <Text style={styles.countText}>{owner.items.length}</Text>
+                </View>
+              </Animated.View>
+            </View>
           </Marker>
         );
       })}
@@ -229,6 +237,20 @@ export default function MarketplaceMapView({
 }
 
 const styles = StyleSheet.create({
+  markerCanvas: {
+    alignItems: "center",
+    height: 76,
+    justifyContent: "center",
+    overflow: "visible",
+    width: 76,
+  },
+  markerVisual: {
+    alignItems: "center",
+    height: 68,
+    justifyContent: "center",
+    overflow: "visible",
+    width: 68,
+  },
   markerShadow: {
     alignItems: "center",
     backgroundColor: colors.surface,
@@ -270,8 +292,8 @@ const styles = StyleSheet.create({
     minWidth: 30,
     paddingHorizontal: 5,
     position: "absolute",
-    right: -7,
-    top: -5,
+    right: 0,
+    top: 0,
   },
   countText: {
     color: "#FFFFFF",
