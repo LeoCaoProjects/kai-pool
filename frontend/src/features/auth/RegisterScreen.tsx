@@ -8,6 +8,7 @@ import {
   Easing,
   Keyboard,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   Pressable,
   StyleSheet,
@@ -17,6 +18,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { ApiError } from "../../api/client";
+import { requestPasswordReset, resetPassword } from "../../api/auth";
 import { colors } from "../../ui/theme";
 import { useAuth } from "./AuthContext";
 
@@ -35,6 +37,7 @@ export function AuthEntryScreen({ initialMode }: { initialMode: AuthMode }) {
   const [passwordVisible, setPasswordVisible] = useState(false);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [recoveryOpen, setRecoveryOpen] = useState(false);
   const [mode, setMode] = useState<AuthMode>(initialMode);
   const modeProgress = useRef(new Animated.Value(initialMode === "register" ? 1 : 0)).current;
   const keyboardProgress = useRef(new Animated.Value(0)).current;
@@ -191,9 +194,12 @@ export function AuthEntryScreen({ initialMode }: { initialMode: AuthMode }) {
                     <Ionicons color="#D17B47" name="restaurant" size={30} />
                   </View>
                 </View>
-                <View style={[styles.ingredient, styles.lemon]}>
-                  <Ionicons color="#775F18" name="sunny" size={22} />
-                </View>
+              <View style={[styles.ingredient, styles.lemon]}>
+                <Ionicons color="#775F18" name="sunny" size={22} />
+              </View>
+              <View style={[styles.ingredient, styles.bowl]}>
+                <Ionicons color="#506AA8" name="water" size={20} />
+              </View>
               </Animated.View>
             </SafeAreaView>
           </Animated.View>
@@ -240,6 +246,7 @@ export function AuthEntryScreen({ initialMode }: { initialMode: AuthMode }) {
               />
               </Animated.View>
               <AuthField
+                key={`email-${mode}`}
                 autoCapitalize="none"
                 autoComplete="email"
                 focused={focused === "email"}
@@ -253,10 +260,12 @@ export function AuthEntryScreen({ initialMode }: { initialMode: AuthMode }) {
                 onSubmitEditing={() => passwordRef.current?.focus()}
                 placeholder="you@example.com"
                 returnKeyType="next"
+                textContentType="emailAddress"
                 value={email}
               />
               <AuthField
-                autoComplete="new-password"
+                key={`password-${mode}`}
+                autoComplete={mode === "register" ? "new-password" : "current-password"}
                 focused={focused === "password"}
                 icon="lock-closed-outline"
                 inputRef={passwordRef}
@@ -266,12 +275,24 @@ export function AuthEntryScreen({ initialMode }: { initialMode: AuthMode }) {
                 onFocus={() => setFocused("password")}
                 onSubmitEditing={() => void submit()}
                 onToggleSecure={() => setPasswordVisible((current) => !current)}
+                passwordRules={mode === "register" ? "minlength: 8; required: lower; required: upper; required: digit;" : undefined}
                 placeholder="At least 8 characters"
                 returnKeyType="go"
                 secureTextEntry={!passwordVisible}
                 secureVisible={passwordVisible}
+                textContentType={mode === "register" ? "newPassword" : "password"}
                 value={password}
               />
+
+              <Animated.View pointerEvents={mode === "login" ? "auto" : "none"} style={{
+                height: modeProgress.interpolate({ inputRange: [0, 1], outputRange: [22, 0] }),
+                opacity: modeProgress.interpolate({ inputRange: [0, 1], outputRange: [1, 0] }),
+                overflow: "hidden",
+              }}>
+                <Pressable hitSlop={8} onPress={() => setRecoveryOpen(true)} style={styles.forgotButton}>
+                  <Text style={styles.forgotText}>Forgot password?</Text>
+                </Pressable>
+              </Animated.View>
 
               <Pressable
                 disabled={submitting}
@@ -344,8 +365,66 @@ export function AuthEntryScreen({ initialMode }: { initialMode: AuthMode }) {
         </View>
         <Text style={styles.toastText}>{error}</Text>
       </Animated.View>
+      <RecoverySheet initialEmail={email} open={recoveryOpen} onClose={() => setRecoveryOpen(false)} />
     </View>
   );
+}
+
+function RecoverySheet({ initialEmail, open, onClose }: { initialEmail: string; open: boolean; onClose: () => void }) {
+  const [step, setStep] = useState<"email" | "code">("email");
+  const [email, setEmail] = useState(initialEmail);
+  const [code, setCode] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  useEffect(() => { if (open) setEmail(initialEmail); }, [initialEmail, open]);
+  const close = () => { setStep("email"); setCode(""); setNewPassword(""); setError(""); onClose(); };
+  const send = async () => {
+    if (!email.trim()) { setError("Enter your account email."); return; }
+    setBusy(true); setError("");
+    try { await requestPasswordReset(email.trim()); setStep("code"); }
+    catch (caught) { setError(caught instanceof ApiError ? caught.message : "Could not send a reset code."); }
+    finally { setBusy(false); }
+  };
+  const reset = async () => {
+    if (!/^\d{6}$/.test(code) || newPassword.length < 8) {
+      setError("Enter the six-digit code and a new password with at least 8 characters."); return;
+    }
+    setBusy(true); setError("");
+    try { await resetPassword(email.trim(), code, newPassword); close(); }
+    catch (caught) { setError(caught instanceof ApiError ? caught.message : "Could not reset your password."); }
+    finally { setBusy(false); }
+  };
+  return <Modal animationType="slide" onRequestClose={close} transparent visible={open}>
+    <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.recoveryRoot}>
+      <Pressable onPress={close} style={styles.recoveryBackdrop} />
+      <SafeAreaView edges={["bottom"]} style={styles.recoverySheet}>
+        <View style={styles.recoveryHandle} />
+        <View style={styles.recoveryHeading}>
+          <View style={styles.recoveryIcon}><Ionicons color={colors.primary} name="key-outline" size={22} /></View>
+          <View style={styles.recoveryCopy}>
+            <Text style={styles.recoveryTitle}>{step === "email" ? "Reset your password" : "Check your email"}</Text>
+            <Text style={styles.recoverySubtitle}>{step === "email" ? "We’ll send you a six-digit code." : `Enter the code sent to ${email}.`}</Text>
+          </View>
+          <Pressable hitSlop={10} onPress={close}><Ionicons color={colors.text} name="close" size={23} /></Pressable>
+        </View>
+        {step === "email" ? <TextInput
+          autoCapitalize="none" autoComplete="email" keyboardType="email-address"
+          onChangeText={setEmail} placeholder="Email address" placeholderTextColor="#858A85"
+          style={styles.recoveryInput} textContentType="emailAddress" value={email}
+        /> : <>
+          <TextInput keyboardType="number-pad" maxLength={6} onChangeText={setCode}
+            placeholder="Six-digit code" placeholderTextColor="#858A85" style={styles.recoveryInput} value={code} />
+          <TextInput autoComplete="new-password" onChangeText={setNewPassword} placeholder="New password"
+            placeholderTextColor="#858A85" secureTextEntry style={styles.recoveryInput} textContentType="newPassword" value={newPassword} />
+        </>}
+        {error ? <Text style={styles.recoveryError}>{error}</Text> : null}
+        <Pressable disabled={busy} onPress={() => void (step === "email" ? send() : reset())} style={styles.createButton}>
+          {busy ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.createButtonText}>{step === "email" ? "Send code" : "Set new password"}</Text>}
+        </Pressable>
+      </SafeAreaView>
+    </KeyboardAvoidingView>
+  </Modal>;
 }
 
 function AuthField({
@@ -411,6 +490,11 @@ const styles = StyleSheet.create({
   tomato: { backgroundColor: "#EDC3AE", borderRadius: 25, bottom: -19, height: 50, left: 12, transform: [{ rotate: "-14deg" }], width: 50 },
   leaf: { backgroundColor: "#C5DCCB", borderBottomLeftRadius: 20, borderTopRightRadius: 20, bottom: 27, height: 40, left: 76, width: 40 },
   lemon: { backgroundColor: "#E8D99B", borderRadius: 27, bottom: -4, height: 54, right: 32, transform: [{ rotate: "9deg" }], width: 54 },
+  bowl: {
+    backgroundColor: "#C7D4EB", borderBottomLeftRadius: 21, borderBottomRightRadius: 21,
+    borderTopLeftRadius: 12, borderTopRightRadius: 12, bottom: -29, height: 42,
+    right: 101, transform: [{ rotate: "6deg" }], width: 48,
+  },
   sheet: {
     backgroundColor: colors.background, borderTopLeftRadius: 30, borderTopRightRadius: 30,
     flex: 1, marginTop: -38, minHeight: 0, paddingHorizontal: 24,
@@ -439,6 +523,8 @@ const styles = StyleSheet.create({
   arrowCircle: { alignItems: "center", backgroundColor: "#E8DDBE", borderRadius: 20, height: 39, justifyContent: "center", width: 39 },
   buttonPressed: { transform: [{ scale: 0.992 }] },
   buttonDisabled: { opacity: 0.7 },
+  forgotButton: { alignSelf: "flex-end", justifyContent: "center", minHeight: 22 },
+  forgotText: { color: colors.primary, fontFamily: "Inter_600SemiBold", fontSize: 12 },
   loginClip: { overflow: "hidden" },
   footerModes: { minHeight: 20, position: "relative" },
   footerModeOverlay: { left: 0, position: "absolute", right: 0, top: 0 },
@@ -451,4 +537,15 @@ const styles = StyleSheet.create({
   },
   toastIcon: { alignItems: "center", backgroundColor: colors.error, borderRadius: 15, height: 30, justifyContent: "center", width: 30 },
   toastText: { color: "#FFFFFF", flex: 1, fontFamily: "Inter_500Medium", fontSize: 12, lineHeight: 17 },
+  recoveryRoot: { flex: 1, justifyContent: "flex-end" },
+  recoveryBackdrop: { backgroundColor: "rgba(20,25,21,0.35)", ...StyleSheet.absoluteFillObject },
+  recoverySheet: { backgroundColor: colors.background, borderTopLeftRadius: 28, borderTopRightRadius: 28, gap: 14, minHeight: 360, paddingHorizontal: 20, paddingTop: 10 },
+  recoveryHandle: { alignSelf: "center", backgroundColor: colors.outline, borderRadius: 2, height: 4, marginBottom: 5, width: 38 },
+  recoveryHeading: { alignItems: "center", flexDirection: "row", gap: 11, marginBottom: 4 },
+  recoveryIcon: { alignItems: "center", backgroundColor: colors.secondaryContainer, borderRadius: 14, height: 46, justifyContent: "center", width: 46 },
+  recoveryCopy: { flex: 1, gap: 2 },
+  recoveryTitle: { color: colors.text, fontFamily: "Inter_600SemiBold", fontSize: 20 },
+  recoverySubtitle: { color: colors.textMuted, fontFamily: "Inter_400Regular", fontSize: 12, lineHeight: 17 },
+  recoveryInput: { backgroundColor: colors.surface, borderColor: colors.surfaceHigh, borderRadius: 14, borderWidth: 1, color: colors.text, fontFamily: "Inter_400Regular", fontSize: 14, minHeight: 52, paddingHorizontal: 15 },
+  recoveryError: { color: colors.error, fontFamily: "Inter_500Medium", fontSize: 12, lineHeight: 17 },
 });

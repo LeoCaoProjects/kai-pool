@@ -4,10 +4,13 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 
 import org.springframework.stereotype.Service;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 
 import nz.ac.aut.kaipool.domain.User;
 import nz.ac.aut.kaipool.dto.UpdateUserRequest;
+import nz.ac.aut.kaipool.dto.ChangePasswordRequest;
+import nz.ac.aut.kaipool.exception.CurrentPasswordIncorrectException;
 import nz.ac.aut.kaipool.dto.UserResponse;
 import nz.ac.aut.kaipool.exception.ResourceNotFoundException;
 import nz.ac.aut.kaipool.repository.UserRepository;
@@ -16,9 +19,11 @@ import nz.ac.aut.kaipool.repository.UserRepository;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
-    public UserService(UserRepository userRepository) {
+    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Transactional(readOnly = true)
@@ -53,6 +58,16 @@ public class UserService {
             user.setOnboardingCompleted(request.onboardingCompleted());
         }
         return toResponse(userRepository.save(user));
+    }
+
+    @Transactional
+    public void changePassword(String email, ChangePasswordRequest request) {
+        User user = getRequiredByEmail(email);
+        if (!passwordEncoder.matches(request.currentPassword(), user.getPasswordHash())) {
+            throw new CurrentPasswordIncorrectException();
+        }
+        user.setPasswordHash(passwordEncoder.encode(request.newPassword()));
+        userRepository.save(user);
     }
 
     private String cleanOptional(String value) {

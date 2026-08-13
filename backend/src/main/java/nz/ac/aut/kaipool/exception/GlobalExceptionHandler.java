@@ -48,10 +48,13 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new ErrorResponse(exception.getMessage()));
     }
 
-    @ExceptionHandler({InvalidImageException.class, MissingServletRequestPartException.class})
+    @ExceptionHandler({InvalidImageException.class, MissingServletRequestPartException.class,
+            CurrentPasswordIncorrectException.class})
     ResponseEntity<ErrorResponse> handleInvalidImage(Exception exception) {
         String message = exception instanceof InvalidImageException
                 ? exception.getMessage()
+                : exception instanceof CurrentPasswordIncorrectException
+                    ? exception.getMessage()
                 : "Choose an image before analysing it.";
         return ResponseEntity.badRequest().body(new ErrorResponse(message));
     }
@@ -64,5 +67,15 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(FoodRecognitionException.class)
     ResponseEntity<ErrorResponse> handleRecognition(FoodRecognitionException exception) {
         return ResponseEntity.status(HttpStatus.BAD_GATEWAY).body(new ErrorResponse(exception.getMessage()));
+    }
+
+    @ExceptionHandler(PasswordResetException.class)
+    ResponseEntity<ErrorResponse> handlePasswordReset(PasswordResetException exception) {
+        return ResponseEntity.badRequest().body(new ErrorResponse(exception.getMessage()));
+    }
+
+    @ExceptionHandler(RecoveryEmailUnavailableException.class)
+    ResponseEntity<ErrorResponse> handleRecoveryEmailUnavailable(RecoveryEmailUnavailableException exception) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(new ErrorResponse(exception.getMessage()));
     }
 }

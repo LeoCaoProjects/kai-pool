@@ -746,8 +746,11 @@ function Secondary({
 function Empty({ text }: { text: string }) {
   return (
     <View style={styles.empty}>
-      <Text style={styles.emptyTitle}>Nothing here yet</Text>
-      <Text style={styles.subtitle}>{text}</Text>
+      <View style={styles.emptyMark}>
+        <Ionicons color={colors.primary} name="restaurant-outline" size={30} />
+      </View>
+      <Text style={styles.emptyTitle}>The table is open</Text>
+      <Text style={styles.emptyBody}>{text}</Text>
     </View>
   );
 }
@@ -1046,14 +1049,32 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: colors.surface,
     borderColor: colors.surfaceHigh,
-    borderRadius: 16,
+    borderRadius: 24,
     borderWidth: 1,
-    gap: 8,
+    gap: 12,
+    marginTop: 4,
     padding: 24,
+  },
+  emptyMark: {
+    alignItems: "center",
+    backgroundColor: colors.secondaryContainer,
+    borderRadius: 24,
+    height: 64,
+    justifyContent: "center",
+    marginBottom: 4,
+    width: 64,
   },
   emptyTitle: {
     color: colors.text,
     fontFamily: "Inter_600SemiBold",
-    fontSize: 18,
+    fontSize: 20,
+  },
+  emptyBody: {
+    color: colors.textMuted,
+    fontFamily: "Inter_400Regular",
+    fontSize: 14,
+    lineHeight: 21,
+    maxWidth: 280,
+    textAlign: "center",
   },
 });
