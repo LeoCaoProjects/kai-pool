@@ -1,9 +1,14 @@
 import Ionicons from "@expo/vector-icons/Ionicons";
-import type { BottomTabBarProps } from "@react-navigation/bottom-tabs";
+import { Tabs } from "expo-router";
+import type { ComponentProps } from "react";
 import { Pressable, StyleSheet, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { colors } from "./theme";
+
+type BottomTabBarProps = Parameters<
+  NonNullable<ComponentProps<typeof Tabs>["tabBar"]>
+>[0];
 
 type TabName =
   | "food-pool"

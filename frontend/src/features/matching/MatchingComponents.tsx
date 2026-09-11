@@ -185,7 +185,11 @@ const styles = StyleSheet.create({
   heroImage: { resizeMode: "cover" },
   heroFallback: { backgroundColor: "#285943" },
   heroShade: {
-    ...StyleSheet.absoluteFillObject,
+    bottom: 0,
+    left: 0,
+    position: "absolute",
+    right: 0,
+    top: 0,
     backgroundColor: "rgba(5, 24, 16, 0.30)",
   },
   badgeRow: { flexDirection: "row", alignItems: "center", gap: 7 },

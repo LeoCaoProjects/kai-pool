@@ -538,11 +538,7 @@ export default function ScanScreen() {
         ]}
       >
       {screenFocused ? (
-        <StatusBar
-          backgroundColor="transparent"
-          style={transitioning ? "dark" : "light"}
-          translucent
-        />
+        <StatusBar style={transitioning ? "dark" : "light"} />
       ) : null}
 
       {image ? (

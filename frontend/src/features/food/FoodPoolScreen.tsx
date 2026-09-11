@@ -901,7 +901,11 @@ const styles = StyleSheet.create({
     borderColor: colors.surfaceHigh,
     borderRadius: 18,
     borderWidth: 1,
-    ...StyleSheet.absoluteFillObject,
+    bottom: 0,
+    left: 0,
+    position: "absolute",
+    right: 0,
+    top: 0,
   },
   foodIcon: {
     alignItems: "center",
@@ -991,7 +995,11 @@ const styles = StyleSheet.create({
   modalRoot: { flex: 1, justifyContent: "flex-end" },
   backdrop: {
     backgroundColor: "rgba(10, 18, 13, 0.42)",
-    ...StyleSheet.absoluteFillObject,
+    bottom: 0,
+    left: 0,
+    position: "absolute",
+    right: 0,
+    top: 0,
   },
   sheet: {
     backgroundColor: colors.surface,

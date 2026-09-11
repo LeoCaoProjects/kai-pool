@@ -46,7 +46,7 @@ hapori.
 ## Built with
 
 - React Native
-- Expo
+- Expo SDK 57
 - TypeScript
 - Java 21
 - Spring Boot
@@ -60,6 +60,22 @@ Node.js, npm, Java 21, and Git are required.
 
 Copy `backend/.env.example` to `backend/.env`, then add your Supabase
 Session pooler details and Gemini API key.
+
+Install the latest [Expo Go](https://expo.dev/go) on each phone. Expo Go
+for SDK 57 requires the computer and phone to be signed into the same free
+Expo account. Sign into the CLI once from the project folder:
+
+```powershell
+cd frontend
+npx expo login
+npx expo whoami
+cd ..
+```
+
+Then sign into the same account in Expo Go. This login is separate from a
+Kai Pool user account and is remembered for future sessions. See Expo's
+[SDK 57 Expo Go sign-in announcement](https://expo.dev/changelog/expo-go-57-login)
+for details.
 
 On Windows, run this from the project folder:
 

@@ -317,7 +317,7 @@ const styles = StyleSheet.create({
   logoutText: { color: colors.error, fontFamily: "Inter_600SemiBold", fontSize: 14 },
   logoutDetail: { color: colors.textMuted, fontFamily: "Inter_400Regular", fontSize: 11 },
   modalFrame: { flex: 1, justifyContent: "flex-end" },
-  backdrop: { backgroundColor: "rgba(20,25,21,0.35)", ...StyleSheet.absoluteFillObject },
+  backdrop: { backgroundColor: "rgba(20,25,21,0.35)", bottom: 0, left: 0, position: "absolute", right: 0, top: 0 },
   passwordSheetFrame: { backgroundColor: colors.background, borderTopLeftRadius: 28, borderTopRightRadius: 28, overflow: "hidden" },
   passwordSheet: { backgroundColor: colors.background, gap: 14, minHeight: 390, paddingHorizontal: 20, paddingTop: 10 },
   sheetHandle: { alignSelf: "center", backgroundColor: colors.outline, borderRadius: 2, height: 4, marginBottom: 4, width: 38 },

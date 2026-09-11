@@ -538,7 +538,7 @@ const styles = StyleSheet.create({
   toastIcon: { alignItems: "center", backgroundColor: colors.error, borderRadius: 15, height: 30, justifyContent: "center", width: 30 },
   toastText: { color: "#FFFFFF", flex: 1, fontFamily: "Inter_500Medium", fontSize: 12, lineHeight: 17 },
   recoveryRoot: { flex: 1, justifyContent: "flex-end" },
-  recoveryBackdrop: { backgroundColor: "rgba(20,25,21,0.35)", ...StyleSheet.absoluteFillObject },
+  recoveryBackdrop: { backgroundColor: "rgba(20,25,21,0.35)", bottom: 0, left: 0, position: "absolute", right: 0, top: 0 },
   recoverySheet: { backgroundColor: colors.background, borderTopLeftRadius: 28, borderTopRightRadius: 28, gap: 14, minHeight: 360, paddingHorizontal: 20, paddingTop: 10 },
   recoveryHandle: { alignSelf: "center", backgroundColor: colors.outline, borderRadius: 2, height: 4, marginBottom: 5, width: 38 },
   recoveryHeading: { alignItems: "center", flexDirection: "row", gap: 11, marginBottom: 4 },

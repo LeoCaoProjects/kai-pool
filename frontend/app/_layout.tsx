@@ -27,7 +27,7 @@ export default function RootLayout() {
   if (!loaded) return null;
   return (
     <SafeAreaProvider>
-      <StatusBar style="dark" backgroundColor="#FDF9F0" />
+      <StatusBar style="dark" />
       <AuthProvider>
         <Stack
           screenOptions={{

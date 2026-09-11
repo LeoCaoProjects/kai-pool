@@ -60,11 +60,7 @@ export default function DiscoverScreen() {
 
   return (
     <View style={styles.screen}>
-      <StatusBar
-        backgroundColor={section === "food" ? "transparent" : colors.background}
-        style="dark"
-        translucent={section === "food"}
-      />
+      <StatusBar style="dark" />
       {section === "food" ? (
         <>
           <View style={styles.mapLayer}>
@@ -182,8 +178,8 @@ export default function DiscoverScreen() {
 
 const styles = StyleSheet.create({
   screen: { backgroundColor: colors.background, flex: 1 },
-  mapLayer: { ...StyleSheet.absoluteFillObject },
-  savedLayer: { ...StyleSheet.absoluteFillObject, zIndex: 1 },
+  mapLayer: { bottom: 0, left: 0, position: "absolute", right: 0, top: 0 },
+  savedLayer: { bottom: 0, left: 0, position: "absolute", right: 0, top: 0, zIndex: 1 },
   floatingControls: { paddingBottom: 12, zIndex: 2 },
   statusBlur: {
     left: 0,
