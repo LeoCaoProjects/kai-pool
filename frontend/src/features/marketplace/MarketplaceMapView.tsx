@@ -48,7 +48,11 @@ const markerPositions = [
 
 const styles = StyleSheet.create({
   map: {
-    ...StyleSheet.absoluteFillObject,
+    bottom: 0,
+    left: 0,
+    position: "absolute",
+    right: 0,
+    top: 0,
     backgroundColor: "#E9EEE4",
     overflow: "hidden",
   },

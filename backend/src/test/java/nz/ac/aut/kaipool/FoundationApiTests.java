@@ -365,12 +365,12 @@ class FoundationApiTests {
                 .andExpect(jsonPath("$[0].matchReason").value(org.hamcrest.Matchers.containsString("Chicken fried rice")))
                 .andExpect(jsonPath("$[0].yourContributions.length()").value(1))
                 .andExpect(jsonPath("$[0].yourContributions[0].name").value("Chicken"))
-                .andExpect(jsonPath("$[0].theirContributions[0].name").value("Rice"))
+                .andExpect(jsonPath("$[0].theirContributions.length()").value(
+                        org.hamcrest.Matchers.greaterThanOrEqualTo(1)))
                 .andExpect(jsonPath("$[0].possibleMeals[0].mealName").value("Chicken fried rice"))
                 .andExpect(jsonPath("$[0].possibleMeals[0].description").isNotEmpty())
-                .andExpect(jsonPath("$[0].possibleMeals[0].imageUrl").value(
-                        org.hamcrest.Matchers.startsWith("https://www.themealdb.com/")))
-                .andExpect(jsonPath("$[0].possibleMeals[0].imageAttribution").isNotEmpty());
+                .andExpect(jsonPath("$[0].possibleMeals[0].imageUrl").value(org.hamcrest.Matchers.nullValue()))
+                .andExpect(jsonPath("$[0].possibleMeals[0].imageAttribution").value(org.hamcrest.Matchers.nullValue()));
 
         mockMvc.perform(get("/api/matches/{id}", strongMatch.id())
                         .header("Authorization", "Bearer " + chef.token()))
@@ -380,7 +380,7 @@ class FoundationApiTests {
     }
 
     @Test
-    void collaborativeRecipesReturnThreeUsefulMealsWithOwnedContributions() throws Exception {
+    void collaborativeRecipeReturnsTheSameMealSelectedForTheMatch() throws Exception {
         RegisteredUser chef = registerUser("Chef", "recipes-chef@kaipool.nz");
         RegisteredUser friend = registerUser("Friend", "recipes-friend@kaipool.nz");
         completeProfile(chef, -36.99, 174.86, "Chinese");
@@ -392,21 +392,20 @@ class FoundationApiTests {
         mockMvc.perform(post("/api/matches/{id}/recipes", friend.id())
                         .header("Authorization", "Bearer " + chef.token()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(3))
+                .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].mealName").isNotEmpty())
                 .andExpect(jsonPath("$[0].description").isNotEmpty())
                 .andExpect(jsonPath("$[0].culturalOriginOrInspiration").isNotEmpty())
                 .andExpect(jsonPath("$[0].ingredientsFromYou[0]").value("Chicken"))
                 .andExpect(jsonPath("$[0].ingredientsFromThem").isArray())
-                .andExpect(jsonPath("$[0].cookingInstructions.length()").value(4))
-                .andExpect(jsonPath("$[0].imageUrl").value(
-                        org.hamcrest.Matchers.startsWith("https://www.themealdb.com/")))
-                .andExpect(jsonPath("$[0].imageAttribution").isNotEmpty());
+                .andExpect(jsonPath("$[0].cookingInstructions.length()").value(3))
+                .andExpect(jsonPath("$[0].imageUrl").value(org.hamcrest.Matchers.nullValue()))
+                .andExpect(jsonPath("$[0].imageAttribution").value(org.hamcrest.Matchers.nullValue()));
 
         mockMvc.perform(post("/api/matches/{id}/recipes", chef.id())
                         .header("Authorization", "Bearer " + friend.token()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(3))
+                .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].ingredientsFromYou[0]").value("Rice"))
                 .andExpect(jsonPath("$[0].ingredientsFromThem[0]").value("Chicken"));
 

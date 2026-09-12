@@ -11,6 +11,11 @@ export type LoginRequest = {
   password: string;
 };
 
+export type ChangePasswordRequest = {
+  currentPassword: string;
+  newPassword: string;
+};
+
 export type UpdateUserRequest = {
   name: string;
   bio: string | null;

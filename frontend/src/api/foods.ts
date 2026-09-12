@@ -10,6 +10,12 @@ export const createFood = (request: FoodRequest) =>
     body: JSON.stringify(request),
   });
 
+export const createFoods = (requests: FoodRequest[]) =>
+  apiRequest<FoodItem[]>("/api/foods/bulk", {
+    method: "POST",
+    body: JSON.stringify(requests),
+  });
+
 export const updateFood = (id: number, request: FoodRequest) =>
   apiRequest<FoodItem>(`/api/foods/${id}`, {
     method: "PUT",

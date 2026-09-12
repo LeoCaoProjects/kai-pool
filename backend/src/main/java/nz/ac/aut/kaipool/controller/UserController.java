@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import jakarta.validation.Valid;
 import nz.ac.aut.kaipool.dto.UpdateUserRequest;
+import nz.ac.aut.kaipool.dto.ChangePasswordRequest;
 import nz.ac.aut.kaipool.dto.UserResponse;
 import nz.ac.aut.kaipool.service.UserService;
 
@@ -32,6 +33,11 @@ public class UserController {
     @PutMapping("/me")
     public UserResponse updateMe(Principal principal, @Valid @RequestBody UpdateUserRequest request) {
         return userService.updateCurrentUser(principal.getName(), request);
+    }
+
+    @PutMapping("/me/password")
+    public void changePassword(Principal principal, @Valid @RequestBody ChangePasswordRequest request) {
+        userService.changePassword(principal.getName(), request);
     }
 
     @GetMapping("/{id}")

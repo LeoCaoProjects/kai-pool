@@ -1,45 +1,74 @@
-import { useCallback, useState, type ReactNode } from "react";
+import Ionicons from "@expo/vector-icons/Ionicons";
 import { useFocusEffect, useRouter } from "expo-router";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import {
   ActivityIndicator,
   Alert,
+  Animated,
+  Easing,
+  findNodeHandle,
+  Modal,
+  PanResponder,
+  Platform,
   Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
+  useWindowDimensions,
   View,
+  Keyboard,
+  LayoutAnimation,
 } from "react-native";
 
 import { ApiError } from "../../api/client";
 import { createFood, deleteFood, getFoods, updateFood } from "../../api/foods";
 import {
-  FOOD_AVAILABILITIES,
-  type FoodAvailability,
-  type FoodItem,
-} from "../../types/models";
+  loadScreenCache,
+  peekScreenCache,
+  updateScreenCache,
+} from "../../api/screenCache";
+import type { FoodItem } from "../../types/models";
 import type { FoodRequest } from "../../types/requests";
+import PageHeader from "../../ui/PageHeader";
 import { colors, sharedStyles } from "../../ui/theme";
 
-const labels: Record<FoodAvailability, string> = {
-  PRIVATE: "Private",
-  COOK_TOGETHER: "Cook Together",
-  GIVEAWAY: "Giveaway",
+const shareOptions = ["COOK_TOGETHER", "GIVEAWAY"] as const;
+const labelFor = (availability: FoodItem["availability"]) =>
+  availability === "GIVEAWAY" ? "Kai Pool" : "Cook Together";
+const descriptions: Record<(typeof shareOptions)[number], string> = {
+  COOK_TOGETHER: "Use it to find people and meals nearby.",
+  GIVEAWAY: "Offer it free for someone nearby to collect.",
 };
-
-const descriptions: Record<FoodAvailability, string> = {
-  PRIVATE: "Only you can see and manage this item.",
-  COOK_TOGETHER: "Use this to find people and meals nearby.",
-  GIVEAWAY: "Offer this food free to your community.",
-};
-
 const emptyDraft = (): FoodRequest => ({
   name: "",
   imageUrl: null,
   quantity: null,
-  availability: "PRIVATE",
+  availability: "COOK_TOGETHER",
 });
+
+const addedLabel = (createdAt: string) => {
+  const elapsed = Date.now() - new Date(createdAt).getTime();
+  if (!Number.isFinite(elapsed) || elapsed < 0) return "Recently added";
+  const minutes = Math.floor(elapsed / 60_000);
+  if (minutes < 1) return "Added just now";
+  if (minutes < 60) return `Added ${minutes} min ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `Added ${hours} hr${hours === 1 ? "" : "s"} ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `Added ${days} day${days === 1 ? "" : "s"} ago`;
+  return `Added ${new Date(createdAt).toLocaleDateString(undefined, {
+    day: "numeric",
+    month: "short",
+  })}`;
+};
 
 export default function FoodPoolScreen({
   previewFoods,
@@ -48,26 +77,92 @@ export default function FoodPoolScreen({
 }) {
   const router = useRouter();
   const previewMode = previewFoods !== undefined;
-  const [foods, setFoods] = useState<FoodItem[]>(previewFoods ?? []);
+  const cachedFoods = previewMode ? undefined : peekScreenCache("foods");
+  const [foods, setFoods] = useState<FoodItem[]>(
+    previewFoods ?? cachedFoods ?? [],
+  );
   const [draft, setDraft] = useState<FoodRequest>(emptyDraft);
   const [editing, setEditing] = useState<FoodItem | null>(null);
   const [showForm, setShowForm] = useState(false);
-  const [loading, setLoading] = useState(!previewMode);
+  const [loading, setLoading] = useState(!previewMode && !cachedFoods);
   const [refreshing, setRefreshing] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [listScrollEnabled, setListScrollEnabled] = useState(true);
+  const [openSwipeId, setOpenSwipeId] = useState<number | null>(null);
   const [error, setError] = useState("");
+  const sheetTranslateY = useRef(new Animated.Value(0)).current;
+  const keyboardLift = useRef(new Animated.Value(0)).current;
+  const keyboardVisible = useRef(false);
+  const nameInput = useRef<TextInput>(null);
+  const quantityInput = useRef<TextInput>(null);
+  const sheetPanResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, gesture) =>
+        gesture.dy > 4 && Math.abs(gesture.dy) > Math.abs(gesture.dx),
+      onPanResponderMove: (_, gesture) => {
+        sheetTranslateY.setValue(Math.max(0, gesture.dy));
+      },
+      onPanResponderRelease: (_, gesture) => {
+        if (gesture.dy > 110 || gesture.vy > 0.8) {
+          closeForm();
+          return;
+        }
+        Animated.spring(sheetTranslateY, {
+          friction: 8,
+          tension: 70,
+          toValue: 0,
+          useNativeDriver: true,
+        }).start();
+      },
+    }),
+  ).current;
+
+  useEffect(() => {
+    const showEvent =
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent =
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+    const showSubscription = Keyboard.addListener(showEvent, (event) => {
+      keyboardVisible.current = true;
+      if (Platform.OS !== "ios") return;
+      const height = event.endCoordinates.height;
+      Animated.timing(keyboardLift, {
+        duration: event.duration || 250,
+        toValue: -Math.min(72, height * 0.22),
+        useNativeDriver: true,
+      }).start();
+    });
+    const hideSubscription = Keyboard.addListener(hideEvent, (event) => {
+      keyboardVisible.current = false;
+      if (Platform.OS !== "ios") return;
+      Animated.timing(keyboardLift, {
+        duration: event.duration || 220,
+        toValue: 0,
+        useNativeDriver: true,
+      }).start();
+    });
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, [keyboardLift]);
 
   const load = useCallback(async (refresh = false) => {
-    refresh ? setRefreshing(true) : setLoading(true);
+    const hasVisibleData = peekScreenCache("foods") !== undefined;
+    if (refresh) setRefreshing(true);
+    else if (!hasVisibleData) setLoading(true);
     try {
-      setFoods(await getFoods());
+      const nextFoods = await loadScreenCache("foods", getFoods, true);
+      setFoods(nextFoods);
       setError("");
     } catch (caught) {
-      setError(
-        caught instanceof ApiError
-          ? caught.message
-          : "Could not load your food pool.",
-      );
+      if (!hasVisibleData) {
+        setError(
+          caught instanceof ApiError
+            ? caught.message
+            : "Could not load your food pool.",
+        );
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -87,28 +182,74 @@ export default function FoodPoolScreen({
   );
 
   const openNew = () => {
+    sheetTranslateY.setValue(700);
     setEditing(null);
     setDraft(emptyDraft());
+    setError("");
     setShowForm(true);
+    requestAnimationFrame(() => {
+      Animated.spring(sheetTranslateY, {
+        friction: 9,
+        tension: 72,
+        toValue: 0,
+        useNativeDriver: true,
+      }).start();
+    });
   };
 
   const openEdit = (food: FoodItem) => {
+    sheetTranslateY.setValue(700);
     setEditing(food);
     setDraft({
       name: food.name,
       imageUrl: food.imageUrl,
       quantity: food.quantity,
-      availability: food.availability,
+      availability:
+        food.availability === "GIVEAWAY" ? "GIVEAWAY" : "COOK_TOGETHER",
     });
+    setError("");
     setShowForm(true);
+    requestAnimationFrame(() => {
+      Animated.spring(sheetTranslateY, {
+        friction: 9,
+        tension: 72,
+        toValue: 0,
+        useNativeDriver: true,
+      }).start();
+    });
   };
+
+  function closeForm() {
+    if (busy) return;
+    setShowForm(false);
+    keyboardLift.setValue(0);
+    sheetTranslateY.setValue(0);
+  }
+
+  function handleBackdropPress() {
+    if (keyboardVisible.current) {
+      Keyboard.dismiss();
+      return;
+    }
+    closeForm();
+  }
+
+  function handleSheetTouch(target: string | number) {
+    if (!keyboardVisible.current) return;
+    const textInputTargets = [
+      findNodeHandle(nameInput.current),
+      findNodeHandle(quantityInput.current),
+    ];
+    if (!textInputTargets.some((inputTarget) => `${inputTarget}` === `${target}`)) {
+      Keyboard.dismiss();
+    }
+  }
 
   const save = async () => {
     if (!draft.name.trim()) {
       setError("Enter a food name.");
       return;
     }
-
     setBusy(true);
     setError("");
     const request = {
@@ -116,7 +257,6 @@ export default function FoodPoolScreen({
       name: draft.name.trim(),
       quantity: draft.quantity?.trim() || null,
     };
-
     try {
       editing
         ? await updateFood(editing.id, request)
@@ -137,7 +277,7 @@ export default function FoodPoolScreen({
   };
 
   const remove = (food: FoodItem) =>
-    Alert.alert("Delete food?", `Remove ${food.name} from your food pool?`, [
+    Alert.alert("Delete food?", `Remove ${food.name} from your Food Pool?`, [
       { text: "Cancel", style: "cancel" },
       {
         text: "Delete",
@@ -161,192 +301,325 @@ export default function FoodPoolScreen({
       },
     ]);
 
+  const deleteFromList = async (food: FoodItem) => {
+    LayoutAnimation.configureNext({
+      duration: 220,
+      update: { type: LayoutAnimation.Types.easeInEaseOut },
+      delete: {
+        property: LayoutAnimation.Properties.opacity,
+        type: LayoutAnimation.Types.easeInEaseOut,
+      },
+    });
+    setFoods((current) => {
+      const remaining = current.filter((item) => item.id !== food.id);
+      updateScreenCache("foods", remaining);
+      return remaining;
+    });
+    try {
+      await deleteFood(food.id);
+    } catch (caught) {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+      setFoods((current) => {
+        if (current.some((item) => item.id === food.id)) return current;
+        const restored = [...current, food].sort(
+          (first, second) =>
+            new Date(second.createdAt).getTime() -
+            new Date(first.createdAt).getTime(),
+        );
+        updateScreenCache("foods", restored);
+        return restored;
+      });
+      setError(
+        caught instanceof ApiError
+          ? caught.message
+          : "Could not delete this food.",
+      );
+    }
+  };
+
   return (
-    <ScrollView
-      style={sharedStyles.screen}
-      contentContainerStyle={styles.content}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={() => void load(true)}
-        />
-      }
-    >
-      <View style={styles.brand}>
-        <Text style={styles.brandText}>Kai Pool</Text>
-      </View>
-
-      {showForm ? (
-        <View style={styles.form}>
-          <Text style={sharedStyles.headline}>
-            {editing ? "Edit Food" : "Add Food"}
-          </Text>
-          <Field label="Food name">
-            <TextInput
-              value={draft.name}
-              onChangeText={(name) => setDraft({ ...draft, name })}
-              placeholder="e.g. Fresh taro root"
-              placeholderTextColor="#7A817C"
-              style={sharedStyles.input}
-            />
-          </Field>
-          <Field label="Quantity / unit">
-            <TextInput
-              value={draft.quantity ?? ""}
-              onChangeText={(quantity) =>
-                setDraft({ ...draft, quantity: quantity || null })
-              }
-              placeholder="e.g. 2 kg"
-              placeholderTextColor="#7A817C"
-              style={sharedStyles.input}
-            />
-          </Field>
-          <View style={styles.field}>
-            <Text style={styles.fieldLabel}>Share availability</Text>
-            {FOOD_AVAILABILITIES.map((option) => (
-              <Pressable
-                key={option}
-                onPress={() => setDraft({ ...draft, availability: option })}
-                style={[
-                  styles.availability,
-                  draft.availability === option && styles.availabilityActive,
-                ]}
-              >
-                <View
-                  style={[
-                    styles.radio,
-                    draft.availability === option && styles.radioActive,
-                  ]}
-                />
-                <View style={styles.availabilityCopy}>
-                  <Text style={styles.availabilityTitle}>{labels[option]}</Text>
-                  <Text style={styles.availabilityDescription}>
-                    {descriptions[option]}
-                  </Text>
-                </View>
-              </Pressable>
-            ))}
-          </View>
-          {error ? (
-            <View style={sharedStyles.errorBox}>
-              <Text style={sharedStyles.errorText}>{error}</Text>
-            </View>
-          ) : null}
+    <View style={sharedStyles.screen}>
+      <PageHeader
+        action={
           <Pressable
-            disabled={busy}
-            onPress={() => void save()}
-            style={sharedStyles.primaryButton}
+            accessibilityLabel="Add food"
+            onPress={openNew}
+            style={styles.add}
           >
-            {busy ? (
-              <ActivityIndicator color="white" />
-            ) : (
-              <Text style={sharedStyles.primaryButtonText}>
-                {editing ? "Save changes" : "Add to Food Pool"}
-              </Text>
-            )}
+            <Ionicons color="#FFFFFF" name="add" size={24} />
           </Pressable>
-          <Pressable
-            disabled={busy}
-            onPress={() => setShowForm(false)}
-            style={sharedStyles.secondaryButton}
-          >
-            <Text style={sharedStyles.secondaryButtonText}>Cancel</Text>
-          </Pressable>
-          {editing ? (
-            <Pressable
-              disabled={busy}
-              onPress={() => remove(editing)}
-              style={styles.delete}
-            >
-              <Text style={styles.deleteText}>Delete ingredient</Text>
-            </Pressable>
-          ) : null}
+        }
+        eyebrow="YOUR KITCHEN"
+        icon="basket"
+        title="Food Pool"
+      />
+      {foods.length > 0 ? (
+        <View style={styles.listHeading}>
+          <Text style={styles.listEyebrow}>YOUR INGREDIENTS</Text>
+          <Text style={styles.itemCount}>{foods.length} items</Text>
         </View>
-      ) : (
-        <>
-          <View style={styles.headingRow}>
-            <View style={styles.headingCopy}>
-              <Text style={sharedStyles.headline}>Local Ingredients</Text>
-              <Text style={sharedStyles.body}>
-                Available for cooking together or sharing through Kai Pool.
-              </Text>
+      ) : null}
+      <ScrollView
+        contentContainerStyle={styles.content}
+        directionalLockEnabled
+        onScrollBeginDrag={() => setOpenSwipeId(null)}
+        scrollEnabled={listScrollEnabled}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => void load(true)}
+          />
+        }
+      >
+        {error && !showForm ? (
+          <Pressable onPress={() => void load()} style={styles.error}>
+            <Text style={sharedStyles.errorText}>{error} Tap to retry.</Text>
+          </Pressable>
+        ) : null}
+        {loading ? (
+          <View style={styles.foodSkeletonList}>
+            <FoodRowSkeleton />
+            <FoodRowSkeleton />
+            <FoodRowSkeleton />
+            <FoodRowSkeleton />
+          </View>
+        ) : null}
+        {!loading && !error && foods.length === 0 ? (
+          <View style={styles.empty}>
+            <View style={styles.emptyMark}>
+              <Ionicons color={colors.primary} name="leaf-outline" size={32} />
             </View>
+            <Text style={styles.emptyTitle}>Your Food Pool is empty</Text>
+            <Text style={styles.emptyBody}>
+              Scan your ingredients or add one manually to start cooking and
+              sharing nearby.
+            </Text>
             <Pressable
-              accessibilityLabel="Add food"
-              onPress={openNew}
-              style={styles.add}
+              onPress={() => router.push("/(tabs)/scan")}
+              style={styles.scanButton}
             >
-              <Text style={styles.addText}>＋</Text>
+              <Ionicons color="#FFFFFF" name="scan-outline" size={19} />
+              <Text style={sharedStyles.primaryButtonText}>Scan food</Text>
+            </Pressable>
+            <Pressable onPress={openNew} style={styles.manualButton}>
+              <Text style={styles.manualButtonText}>Add manually</Text>
             </Pressable>
           </View>
-
-          {error ? (
-            <Pressable
-              onPress={() => void load()}
-              style={sharedStyles.errorBox}
-            >
-              <Text style={sharedStyles.errorText}>{error} Tap to retry.</Text>
-            </Pressable>
-          ) : null}
-          {loading ? (
-            <ActivityIndicator color={colors.primary} style={styles.loader} />
-          ) : null}
-          {!loading && !error && foods.length === 0 ? (
-            <View style={styles.empty}>
-              <View style={styles.emptyMark}>
-                <Text style={styles.emptyMarkText}>＋</Text>
-              </View>
-              <Text style={sharedStyles.headline}>Your Food Pool is empty</Text>
-              <Text style={[sharedStyles.body, styles.center]}>
-                Add ingredients manually or scan a photo to get started.
-              </Text>
-              <Pressable
-                onPress={() => router.push("/(tabs)/scan")}
-                style={sharedStyles.primaryButton}
-              >
-                <Text style={sharedStyles.primaryButtonText}>Scan food</Text>
-              </Pressable>
-              <Pressable onPress={openNew} style={sharedStyles.secondaryButton}>
-                <Text style={sharedStyles.secondaryButtonText}>
-                  Add manually
-                </Text>
-              </Pressable>
-            </View>
-          ) : null}
-          {foods.length > 0 ? (
+        ) : null}
+        {foods.length > 0 ? (
+          <View style={styles.listSection}>
             <View style={styles.list}>
-              {foods.map((food, index) => (
-                <Pressable
+              {foods.map((food) => (
+                <SwipeableFoodRow
+                  food={food}
+                  activeSwipeId={openSwipeId}
                   key={food.id}
-                  onPress={() => openEdit(food)}
-                  style={[
-                    styles.row,
-                    index < foods.length - 1 && styles.rowDivider,
-                  ]}
-                >
-                  <View style={styles.rowCopy}>
-                    <Text numberOfLines={1} style={styles.foodName}>
-                      {food.name}
-                    </Text>
-                    <Text style={styles.quantity}>
-                      {food.quantity || "Quantity not specified"}
-                    </Text>
-                  </View>
-                  <View style={styles.rowMeta}>
-                    <View style={styles.badge}>
-                      <Text style={styles.badgeText}>
-                        {labels[food.availability]}
-                      </Text>
-                    </View>
-                    <Text style={styles.chevron}>›</Text>
-                  </View>
-                </Pressable>
+                  onDelete={() => deleteFromList(food)}
+                  onOpen={() => openEdit(food)}
+                  onRevealChange={setOpenSwipeId}
+                  onSwipeStateChange={(swiping) =>
+                    setListScrollEnabled(!swiping)
+                  }
+                />
               ))}
             </View>
-          ) : null}
-        </>
-      )}
-    </ScrollView>
+          </View>
+        ) : null}
+      </ScrollView>
+
+      <Modal
+        animationType="none"
+        onRequestClose={closeForm}
+        transparent
+        visible={showForm}
+      >
+        <View style={styles.modalRoot}>
+          <Pressable
+            accessibilityLabel="Close food form"
+            onPress={handleBackdropPress}
+            style={styles.backdrop}
+          />
+          <Animated.View
+            onTouchStart={(event) => handleSheetTouch(event.nativeEvent.target)}
+            style={[
+              styles.sheet,
+              {
+                transform: [
+                  { translateY: sheetTranslateY },
+                  { translateY: keyboardLift },
+                ],
+              },
+            ]}
+          >
+            <View pointerEvents="none" style={styles.sheetBottomFill} />
+            <View {...sheetPanResponder.panHandlers} style={styles.dragArea}>
+              <View style={styles.sheetHandle} />
+            </View>
+            <View style={styles.sheetHeader}>
+              <View style={styles.sheetHeading}>
+                <Text style={styles.sheetEyebrow}>
+                  {editing ? "EDIT INGREDIENT" : "NEW INGREDIENT"}
+                </Text>
+                <Text style={styles.sheetTitle}>
+                  {editing ? "Update your food" : "Add to Food Pool"}
+                </Text>
+              </View>
+              <Pressable
+                accessibilityLabel="Close"
+                disabled={busy}
+                onPress={closeForm}
+                style={styles.closeButton}
+              >
+                <Ionicons color={colors.text} name="close" size={21} />
+              </Pressable>
+            </View>
+            <ScrollView
+              automaticallyAdjustKeyboardInsets
+              contentContainerStyle={styles.form}
+              keyboardDismissMode="interactive"
+              keyboardShouldPersistTaps="handled"
+            >
+              <Field label="Food name">
+                <TextInput
+                  ref={nameInput}
+                  maxLength={150}
+                  value={draft.name}
+                  onChangeText={(name) => setDraft({ ...draft, name })}
+                  placeholder="Fresh taro root"
+                  placeholderTextColor="#7A817C"
+                  style={styles.input}
+                />
+              </Field>
+              <Field label="Quantity">
+                <TextInput
+                  ref={quantityInput}
+                  maxLength={100}
+                  value={draft.quantity ?? ""}
+                  onChangeText={(quantity) =>
+                    setDraft({ ...draft, quantity: quantity || null })
+                  }
+                  placeholder="2 kg, 4 pieces, half a bag"
+                  placeholderTextColor="#7A817C"
+                  style={styles.input}
+                />
+              </Field>
+              <View style={styles.field}>
+                <Text style={styles.fieldLabel}>How should it be shared?</Text>
+                <View style={styles.shareOptions}>
+                  {shareOptions.map((option) => {
+                    const selected = draft.availability === option;
+                    return (
+                      <Pressable
+                        key={option}
+                        onPress={() =>
+                          setDraft({ ...draft, availability: option })
+                        }
+                        style={[
+                          styles.shareOption,
+                          selected && styles.shareOptionSelected,
+                        ]}
+                      >
+                        <Ionicons
+                          color={selected ? "#FFFFFF" : colors.primary}
+                          name={
+                            option === "GIVEAWAY"
+                              ? "gift-outline"
+                              : "restaurant-outline"
+                          }
+                          size={20}
+                        />
+                        <Text
+                          style={[
+                            styles.shareTitle,
+                            selected && styles.shareTitleSelected,
+                          ]}
+                        >
+                          {labelFor(option)}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.shareDescription,
+                            selected && styles.shareDescriptionSelected,
+                          ]}
+                        >
+                          {descriptions[option]}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
+              {error ? (
+                <View style={sharedStyles.errorBox}>
+                  <Text style={sharedStyles.errorText}>{error}</Text>
+                </View>
+              ) : null}
+              {editing ? (
+                <Pressable
+                  disabled={busy}
+                  onPress={() => remove(editing)}
+                  style={styles.delete}
+                >
+                  <Ionicons
+                    color={colors.error}
+                    name="trash-outline"
+                    size={18}
+                  />
+                  <Text style={styles.deleteText}>Delete ingredient</Text>
+                </Pressable>
+              ) : null}
+            </ScrollView>
+            <View style={styles.sheetActions}>
+              <Pressable
+                disabled={busy}
+                onPress={closeForm}
+                style={styles.cancelButton}
+              >
+                <Text style={styles.cancelText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                disabled={busy}
+                onPress={() => void save()}
+                style={styles.saveButton}
+              >
+                {busy ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <>
+                    <Text style={styles.saveText}>
+                      {editing ? "Save changes" : "Add food"}
+                    </Text>
+                    <Ionicons color="#FFFFFF" name="arrow-forward" size={18} />
+                  </>
+                )}
+              </Pressable>
+            </View>
+          </Animated.View>
+        </View>
+      </Modal>
+    </View>
+  );
+}
+
+function FoodRowSkeleton() {
+  const pulse = useRef(new Animated.Value(0.55)).current;
+  useEffect(() => {
+    const animation = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1, duration: 760, useNativeDriver: true }),
+      Animated.timing(pulse, { toValue: 0.55, duration: 760, useNativeDriver: true }),
+    ]));
+    animation.start();
+    return () => animation.stop();
+  }, [pulse]);
+  return (
+    <Animated.View style={[styles.foodSkeletonRow, { opacity: pulse }]}>
+      <View style={styles.foodSkeletonIcon} />
+      <View style={styles.foodSkeletonCopy}>
+        <View style={styles.foodSkeletonName} />
+        <View style={styles.foodSkeletonDate} />
+      </View>
+      <View style={styles.foodSkeletonBadge} />
+    </Animated.View>
   );
 }
 
@@ -359,23 +632,184 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
+function SwipeableFoodRow({
+  activeSwipeId,
+  food,
+  onDelete,
+  onOpen,
+  onRevealChange,
+  onSwipeStateChange,
+}: {
+  activeSwipeId: number | null;
+  food: FoodItem;
+  onDelete: () => Promise<void>;
+  onOpen: () => void;
+  onRevealChange: (id: number | null) => void;
+  onSwipeStateChange: (swiping: boolean) => void;
+}) {
+  const { width: screenWidth } = useWindowDimensions();
+  const translateX = useRef(new Animated.Value(0)).current;
+  const restingX = useRef(0);
+  const deleting = useRef(false);
+  const giveaway = food.availability === "GIVEAWAY";
+
+  useEffect(() => {
+    if (
+      deleting.current ||
+      activeSwipeId === food.id ||
+      restingX.current === 0
+    ) {
+      return;
+    }
+    restingX.current = 0;
+    Animated.spring(translateX, {
+      damping: 22,
+      mass: 0.75,
+      overshootClamping: true,
+      stiffness: 240,
+      toValue: 0,
+      useNativeDriver: true,
+    }).start();
+  }, [activeSwipeId, food.id, translateX]);
+
+  const settle = (toValue: number) => {
+    restingX.current = toValue;
+    Animated.spring(translateX, {
+      damping: 22,
+      mass: 0.75,
+      overshootClamping: true,
+      stiffness: 240,
+      toValue,
+      useNativeDriver: true,
+    }).start();
+  };
+
+  const completeDelete = () => {
+    if (deleting.current) return;
+    deleting.current = true;
+    onRevealChange(null);
+    Animated.timing(translateX, {
+      duration: 280,
+      easing: Easing.out(Easing.cubic),
+      toValue: -screenWidth,
+      useNativeDriver: true,
+    }).start(() => void onDelete());
+  };
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, gesture) =>
+        gesture.dx < -3 &&
+        (Math.abs(gesture.dx) > Math.abs(gesture.dy) * 0.65 ||
+          gesture.vx < -0.35),
+      onMoveShouldSetPanResponderCapture: (_, gesture) =>
+        gesture.dx < -3 &&
+        (Math.abs(gesture.dx) > Math.abs(gesture.dy) * 0.65 ||
+          gesture.vx < -0.35),
+      onPanResponderTerminationRequest: () => false,
+      onShouldBlockNativeResponder: () => true,
+      onPanResponderGrant: () => {
+        onRevealChange(food.id);
+        onSwipeStateChange(true);
+      },
+      onPanResponderMove: (_, gesture) => {
+        const next = Math.min(0, restingX.current + gesture.dx);
+        translateX.setValue(Math.max(-520, next));
+      },
+      onPanResponderRelease: (_, gesture) => {
+        const next = restingX.current + gesture.dx;
+        const projected = next + gesture.vx * 210;
+        onSwipeStateChange(false);
+        const deliberateFlick =
+          next < -screenWidth * 0.06 &&
+          gesture.vx < -0.65 &&
+          projected < -screenWidth * 0.35;
+        if (next < -screenWidth * 0.82 || deliberateFlick) {
+          completeDelete();
+        } else {
+          const reveal = next < -44;
+          settle(reveal ? -88 : 0);
+          onRevealChange(reveal ? food.id : null);
+        }
+      },
+      onPanResponderTerminate: () => {
+        onSwipeStateChange(false);
+        settle(restingX.current);
+      },
+    }),
+  ).current;
+
+  const handleOpen = () => {
+    if (restingX.current < 0) {
+      settle(0);
+      onRevealChange(null);
+      return;
+    }
+    onOpen();
+  };
+
+  return (
+    <Animated.View style={styles.swipeContainer}>
+      <Pressable
+        accessibilityLabel={`Delete ${food.name}`}
+        onPress={completeDelete}
+        style={styles.deleteAction}
+      >
+        <Ionicons color="#FFFFFF" name="trash-outline" size={20} />
+        <Text style={styles.deleteActionText}>Delete</Text>
+      </Pressable>
+      <Animated.View
+        {...panResponder.panHandlers}
+        style={{ transform: [{ translateX }] }}
+      >
+        <Pressable
+          onPress={handleOpen}
+          style={({ pressed }) => [
+            styles.row,
+            pressed && styles.rowPressed,
+          ]}
+        >
+          <View
+            style={[styles.foodIcon, giveaway && styles.giveawayIcon]}
+          >
+            <Ionicons
+              color={giveaway ? colors.accent : colors.primary}
+              name={giveaway ? "gift-outline" : "leaf-outline"}
+              size={21}
+            />
+          </View>
+          <View style={styles.rowCopy}>
+            <View style={styles.nameLine}>
+              <Text numberOfLines={1} style={styles.foodName}>
+                {food.name}
+              </Text>
+              {food.quantity ? (
+                <Text numberOfLines={1} style={styles.quantity}>
+                  {food.quantity}
+                </Text>
+              ) : null}
+            </View>
+            <Text style={styles.addedAt}>{addedLabel(food.createdAt)}</Text>
+          </View>
+          <View style={styles.rowMeta}>
+            <Text
+              style={[
+                styles.statusText,
+                giveaway && styles.giveawayText,
+              ]}
+            >
+              {labelFor(food.availability)}
+            </Text>
+          </View>
+        </Pressable>
+      </Animated.View>
+      <View pointerEvents="none" style={styles.rowOutline} />
+    </Animated.View>
+  );
+}
+
 const styles = StyleSheet.create({
-  content: { gap: 16, paddingBottom: 40 },
-  brand: {
-    borderBottomColor: colors.outline,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    paddingHorizontal: 20,
-    paddingVertical: 18,
-  },
-  brandText: { color: colors.primary, fontSize: 20, fontWeight: "700" },
-  headingRow: {
-    alignItems: "center",
-    flexDirection: "row",
-    gap: 12,
-    paddingHorizontal: 20,
-    paddingTop: 14,
-  },
-  headingCopy: { flex: 1, gap: 2 },
+  content: { flexGrow: 1, gap: 16, paddingBottom: 48 },
   add: {
     alignItems: "center",
     backgroundColor: colors.primary,
@@ -384,100 +818,339 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     width: 48,
   },
-  addText: { color: "white", fontSize: 26 },
-  loader: { marginTop: 40 },
-  list: {
+  error: { marginHorizontal: 20, ...sharedStyles.errorBox },
+  loader: { marginTop: 48 },
+  foodSkeletonList: { gap: 10 },
+  foodSkeletonRow: {
+    alignItems: "center",
     backgroundColor: colors.surface,
-    borderColor: colors.outline,
-    borderRadius: 16,
-    borderWidth: 1,
-    marginHorizontal: 20,
-    overflow: "hidden",
-  },
-  row: {
-    alignItems: "center",
-    flexDirection: "row",
-    gap: 16,
-    minHeight: 78,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-  },
-  rowDivider: {
-    borderBottomColor: colors.outline,
-    borderBottomWidth: StyleSheet.hairlineWidth,
-  },
-  rowCopy: { flex: 1, gap: 5 },
-  rowMeta: { alignItems: "center", flexDirection: "row", gap: 10 },
-  foodName: { color: colors.text, fontSize: 17, fontWeight: "600" },
-  badge: {
-    backgroundColor: colors.secondaryContainer,
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-  },
-  badgeText: { color: colors.primary, fontSize: 11, fontWeight: "600" },
-  quantity: { color: colors.textMuted, fontSize: 14 },
-  chevron: { color: colors.textMuted, fontSize: 26, lineHeight: 26 },
-  empty: {
-    alignItems: "stretch",
-    gap: 14,
-    marginHorizontal: 20,
-    marginTop: 48,
-  },
-  emptyMark: {
-    alignItems: "center",
-    alignSelf: "center",
-    backgroundColor: colors.surfaceHigh,
-    borderRadius: 46,
-    height: 92,
-    justifyContent: "center",
-    width: 92,
-  },
-  emptyMarkText: { color: colors.primary, fontSize: 34 },
-  center: { textAlign: "center" },
-  form: { gap: 18, padding: 20 },
-  field: { gap: 8 },
-  fieldLabel: { color: colors.textMuted, fontSize: 14, fontWeight: "500" },
-  availability: {
-    alignItems: "flex-start",
     borderColor: colors.surfaceHigh,
-    borderRadius: 12,
+    borderRadius: 18,
     borderWidth: 1,
     flexDirection: "row",
     gap: 12,
-    padding: 16,
+    minHeight: 76,
+    padding: 12,
   },
-  availabilityActive: {
-    backgroundColor: "#CCEAD6",
-    borderColor: colors.primaryContainer,
+  foodSkeletonIcon: {
+    backgroundColor: "#E2E6E0",
+    borderRadius: 13,
+    height: 44,
+    width: 44,
   },
-  radio: {
-    borderColor: colors.outline,
-    borderRadius: 10,
-    borderWidth: 2,
-    height: 20,
-    marginTop: 2,
-    width: 20,
+  foodSkeletonCopy: { flex: 1, gap: 8 },
+  foodSkeletonName: { backgroundColor: "#E2E6E0", borderRadius: 5, height: 16, width: "58%" },
+  foodSkeletonDate: { backgroundColor: "#ECEFEA", borderRadius: 4, height: 11, width: "34%" },
+  foodSkeletonBadge: { backgroundColor: "#E7EAE5", borderRadius: 12, height: 28, width: 78 },
+  listSection: { paddingHorizontal: 20, paddingTop: 4 },
+  listHeading: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingBottom: 10,
+    paddingHorizontal: 22,
+    paddingTop: 10,
   },
-  radioActive: {
+  listEyebrow: {
+    color: colors.secondary,
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 11,
+    letterSpacing: 1,
+  },
+  itemCount: {
+    color: colors.textMuted,
+    fontFamily: "Inter_500Medium",
+    fontSize: 12,
+  },
+  list: {},
+  swipeContainer: {
+    backgroundColor: colors.error,
+    borderRadius: 18,
+    height: 76,
+    marginBottom: 8,
+    overflow: "hidden",
+    position: "relative",
+  },
+  deleteAction: {
+    alignItems: "center",
+    backgroundColor: colors.error,
+    bottom: 0,
+    gap: 3,
+    justifyContent: "center",
+    position: "absolute",
+    right: 0,
+    top: 0,
+    width: 88,
+  },
+  deleteActionText: {
+    color: "#FFFFFF",
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 11,
+  },
+  row: {
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    flexDirection: "row",
+    gap: 13,
+    minHeight: 76,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  rowPressed: { backgroundColor: colors.surfaceLow },
+  rowOutline: {
+    borderColor: colors.surfaceHigh,
+    borderRadius: 18,
+    borderWidth: 1,
+    bottom: 0,
+    left: 0,
+    position: "absolute",
+    right: 0,
+    top: 0,
+  },
+  foodIcon: {
+    alignItems: "center",
+    backgroundColor: colors.secondaryContainer,
+    borderRadius: 13,
+    height: 44,
+    justifyContent: "center",
+    width: 44,
+  },
+  giveawayIcon: { backgroundColor: "#F8E6D8" },
+  rowCopy: { flex: 1, gap: 4 },
+  nameLine: { alignItems: "baseline", flexDirection: "row", gap: 7 },
+  foodName: {
+    color: colors.text,
+    flexShrink: 1,
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 16,
+  },
+  quantity: {
+    color: colors.textMuted,
+    flexShrink: 1,
+    fontFamily: "Inter_400Regular",
+    fontSize: 11,
+    fontStyle: "italic",
+  },
+  addedAt: {
+    color: colors.textMuted,
+    fontFamily: "Inter_400Regular",
+    fontSize: 11,
+  },
+  rowMeta: { alignItems: "center", flexDirection: "row", gap: 7 },
+  statusText: {
+    color: colors.primary,
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 11,
+  },
+  giveawayText: { color: colors.accent },
+  empty: {
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderColor: colors.surfaceHigh,
+    borderRadius: 24,
+    borderWidth: 1,
+    gap: 12,
+    marginHorizontal: 20,
+    marginTop: 20,
+    padding: 24,
+  },
+  emptyMark: {
+    alignItems: "center",
+    backgroundColor: colors.secondaryContainer,
+    borderRadius: 24,
+    height: 64,
+    justifyContent: "center",
+    marginBottom: 4,
+    width: 64,
+  },
+  emptyTitle: {
+    color: colors.text,
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 20,
+  },
+  emptyBody: {
+    color: colors.textMuted,
+    fontFamily: "Inter_400Regular",
+    fontSize: 14,
+    lineHeight: 21,
+    textAlign: "center",
+  },
+  scanButton: {
+    alignItems: "center",
+    alignSelf: "stretch",
+    backgroundColor: colors.primary,
+    borderRadius: 14,
+    flexDirection: "row",
+    gap: 8,
+    justifyContent: "center",
+    minHeight: 52,
+    marginTop: 4,
+  },
+  manualButton: { padding: 6 },
+  manualButtonText: {
+    color: colors.primary,
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 14,
+  },
+  modalRoot: { flex: 1, justifyContent: "flex-end" },
+  backdrop: {
+    backgroundColor: "rgba(10, 18, 13, 0.42)",
+    bottom: 0,
+    left: 0,
+    position: "absolute",
+    right: 0,
+    top: 0,
+  },
+  sheet: {
+    backgroundColor: colors.surface,
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    maxHeight: "88%",
+    overflow: "visible",
+    paddingBottom: Platform.OS === "ios" ? 24 : 16,
+  },
+  sheetBottomFill: {
+    backgroundColor: colors.surface,
+    bottom: -84,
+    height: 86,
+    left: 0,
+    position: "absolute",
+    right: 0,
+  },
+  sheetHandle: {
+    alignSelf: "center",
+    backgroundColor: colors.outline,
+    borderRadius: 2,
+    height: 4,
+    width: 38,
+  },
+  dragArea: {
+    alignItems: "center",
+    minHeight: 28,
+    paddingTop: 10,
+  },
+  sheetHeader: {
+    alignItems: "center",
+    flexDirection: "row",
+    paddingBottom: 16,
+    paddingHorizontal: 20,
+    paddingTop: 8,
+  },
+  sheetHeading: { flex: 1, gap: 3 },
+  sheetEyebrow: {
+    color: colors.secondary,
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 10,
+    letterSpacing: 1.1,
+  },
+  sheetTitle: {
+    color: colors.text,
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 22,
+    letterSpacing: -0.3,
+  },
+  closeButton: {
+    alignItems: "center",
+    backgroundColor: colors.surfaceLow,
+    borderRadius: 18,
+    height: 36,
+    justifyContent: "center",
+    width: 36,
+  },
+  form: { gap: 17, paddingHorizontal: 20, paddingBottom: 16 },
+  field: { gap: 8 },
+  fieldLabel: {
+    color: colors.textMuted,
+    fontFamily: "Inter_500Medium",
+    fontSize: 13,
+  },
+  input: {
+    backgroundColor: colors.surfaceLow,
+    borderColor: colors.surfaceHigh,
+    borderRadius: 14,
+    borderWidth: 1,
+    color: colors.text,
+    fontFamily: "Inter_400Regular",
+    fontSize: 16,
+    minHeight: 54,
+    paddingHorizontal: 15,
+  },
+  shareOptions: { flexDirection: "row", gap: 10 },
+  shareOption: {
+    backgroundColor: colors.surfaceLow,
+    borderColor: colors.surfaceHigh,
+    borderRadius: 16,
+    borderWidth: 1,
+    flex: 1,
+    gap: 5,
+    minHeight: 126,
+    padding: 14,
+  },
+  shareOptionSelected: {
     backgroundColor: colors.primary,
     borderColor: colors.primary,
-    borderWidth: 5,
   },
-  availabilityCopy: { flex: 1, gap: 3 },
-  availabilityTitle: { color: colors.text, fontSize: 18, fontWeight: "500" },
-  availabilityDescription: {
+  shareTitle: {
+    color: colors.text,
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 15,
+    marginTop: 2,
+  },
+  shareTitleSelected: { color: "#FFFFFF" },
+  shareDescription: {
     color: colors.textMuted,
-    fontSize: 14,
-    lineHeight: 20,
+    fontFamily: "Inter_400Regular",
+    fontSize: 12,
+    lineHeight: 17,
   },
+  shareDescriptionSelected: { color: "#DDE8E1" },
   delete: {
     alignItems: "center",
-    borderColor: colors.error,
-    borderRadius: 12,
+    alignSelf: "flex-start",
+    flexDirection: "row",
+    gap: 7,
+    paddingVertical: 5,
+  },
+  deleteText: {
+    color: colors.error,
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 13,
+  },
+  sheetActions: {
+    borderTopColor: colors.surfaceHigh,
+    borderTopWidth: 1,
+    flexDirection: "row",
+    gap: 10,
+    paddingHorizontal: 20,
+    paddingTop: 14,
+  },
+  cancelButton: {
+    alignItems: "center",
+    borderColor: colors.outline,
+    borderRadius: 14,
     borderWidth: 1,
     justifyContent: "center",
     minHeight: 52,
+    paddingHorizontal: 20,
   },
-  deleteText: { color: colors.error, fontWeight: "600" },
+  cancelText: {
+    color: colors.text,
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 14,
+  },
+  saveButton: {
+    alignItems: "center",
+    backgroundColor: colors.primary,
+    borderRadius: 14,
+    flex: 1,
+    flexDirection: "row",
+    gap: 8,
+    justifyContent: "center",
+    minHeight: 52,
+  },
+  saveText: {
+    color: "#FFFFFF",
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 14,
+  },
 });

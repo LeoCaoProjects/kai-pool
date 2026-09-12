@@ -54,8 +54,7 @@ public class CookingConnectionService {
         if (requester.getId().equals(recipientId)) {
             throw new ConnectionConflictException("You cannot send a cooking request to yourself");
         }
-        MatchingService.MatchContext match = matchingService.getRequiredMatch(email, recipientId);
-        User recipient = match.otherUser();
+        User recipient = matchingService.getRequiredEligibleUser(email, recipientId);
         CookingConnection connection = connectionRepository.findBetween(requester.getId(), recipientId)
                 .orElseGet(() -> new CookingConnection(requester, recipient));
         if (connection.getId() != null && connection.getStatus() != CookingConnectionStatus.DECLINED) {
@@ -80,6 +79,14 @@ public class CookingConnectionService {
         CookingConnection connection = getParticipantConnection(id, viewer);
         if (!connection.getRecipient().getId().equals(viewer.getId())) {
             throw new ForbiddenException("Only the recipient can respond to this cooking request");
+        }
+        // Mobile clients may retry when the connection drops after the database
+        // commit but before the response reaches the phone. Repeating the same
+        // decision is safe and should return the already-updated connection.
+        if (connection.getStatus() == request.status()
+                && (request.status() == CookingConnectionStatus.ACCEPTED
+                        || request.status() == CookingConnectionStatus.DECLINED)) {
+            return toResponse(connection, viewer);
         }
         if (connection.getStatus() != CookingConnectionStatus.PENDING) {
             throw new ConnectionConflictException("This cooking request has already been answered");

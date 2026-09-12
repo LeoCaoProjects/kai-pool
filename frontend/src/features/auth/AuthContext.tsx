@@ -20,6 +20,11 @@ import {
   setUnauthorizedHandler,
 } from "../../api/client";
 import { updateCurrentUser as updateCurrentUserRequest } from "../../api/users";
+import {
+  clearScreenCache,
+  hydrateScreenCache,
+  setScreenCacheOwner,
+} from "../../api/screenCache";
 import type { User } from "../../types/models";
 import type {
   LoginRequest,
@@ -44,6 +49,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     setUnauthorizedHandler(() => {
+      clearScreenCache();
+      setApiToken(null);
       setUser(null);
       void AsyncStorage.multiRemove([ACCESS_TOKEN_KEY, AUTH_USER_KEY]);
     });
@@ -65,6 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (cachedUserJson) {
         try {
           cachedUser = JSON.parse(cachedUserJson) as User;
+          await hydrateScreenCache(cachedUser.id);
           setUser(cachedUser);
         } catch {
           await AsyncStorage.removeItem(AUTH_USER_KEY);
@@ -95,7 +103,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     void restoreSession();
   }, []);
 
+  useEffect(() => {
+    if (!user) return;
+    const expectedUserId = user.id;
+    const reconcileStoredToken = async () => {
+      const token = await AsyncStorage.getItem(ACCESS_TOKEN_KEY);
+      if (token) {
+        setApiToken(token);
+        return;
+      }
+      clearScreenCache();
+      setApiToken(null);
+      setUser((current) =>
+        current?.id === expectedUserId ? null : current,
+      );
+      await AsyncStorage.removeItem(AUTH_USER_KEY);
+    };
+    void reconcileStoredToken();
+  }, [user?.id]);
+
   const saveSession = async (token: string, authenticatedUser: User) => {
+    clearScreenCache();
+    setScreenCacheOwner(authenticatedUser.id);
     setApiToken(token);
     await AsyncStorage.multiSet([
       [ACCESS_TOKEN_KEY, token],
@@ -121,6 +150,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const logout = async () => {
+    clearScreenCache();
     setApiToken(null);
     setUser(null);
     await AsyncStorage.multiRemove([ACCESS_TOKEN_KEY, AUTH_USER_KEY]);

@@ -185,7 +185,11 @@ const styles = StyleSheet.create({
   heroImage: { resizeMode: "cover" },
   heroFallback: { backgroundColor: "#285943" },
   heroShade: {
-    ...StyleSheet.absoluteFillObject,
+    bottom: 0,
+    left: 0,
+    position: "absolute",
+    right: 0,
+    top: 0,
     backgroundColor: "rgba(5, 24, 16, 0.30)",
   },
   badgeRow: { flexDirection: "row", alignItems: "center", gap: 7 },
@@ -236,19 +240,19 @@ const styles = StyleSheet.create({
     fontSize: 10,
   },
   personRow: { flexDirection: "row", gap: 12, alignItems: "center" },
-  avatar: { width: 58, height: 58, borderRadius: 29 },
+  avatar: { width: 52, height: 52, borderRadius: 17 },
   avatarFallback: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
+    width: 52,
+    height: 52,
+    borderRadius: 17,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#d8f5df",
+    backgroundColor: "#E7EFE5",
   },
   avatarInitial: {
     color: "#173124",
     fontFamily: "Inter_600SemiBold",
-    fontSize: 22,
+    fontSize: 19,
   },
   personCopy: { flex: 1, gap: 1 },
   personEyebrow: {
@@ -261,7 +265,7 @@ const styles = StyleSheet.create({
   personName: {
     color: "#173124",
     fontFamily: "Inter_600SemiBold",
-    fontSize: 19,
+    fontSize: 18,
   },
   bio: {
     color: "#424844",
@@ -270,7 +274,7 @@ const styles = StyleSheet.create({
     lineHeight: 18,
   },
   cultures: {
-    marginTop: 2,
+    marginTop: 3,
     color: "#4E635A",
     fontFamily: "Inter_500Medium",
     fontSize: 12,

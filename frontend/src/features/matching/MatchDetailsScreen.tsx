@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
-import { useLocalSearchParams } from "expo-router";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import {
   ActivityIndicator,
   Pressable,
@@ -11,6 +11,7 @@ import {
 } from "react-native";
 
 import { ApiError } from "../../api/client";
+import { peekScreenCache } from "../../api/screenCache";
 import {
   generateCollaborativeRecipes,
   getCookingMatch,
@@ -23,18 +24,25 @@ import {
 } from "./MatchingComponents";
 
 export default function MatchDetailsScreen() {
+  const router = useRouter();
   const { width } = useWindowDimensions();
-  const params = useLocalSearchParams<{ matchedUserId?: string | string[] }>();
-  const rawId = Array.isArray(params.matchedUserId)
-    ? params.matchedUserId[0]
-    : params.matchedUserId;
+  const params = useLocalSearchParams<{
+    matchedUserId?: string | string[];
+    id?: string | string[];
+  }>();
+  const routeValue = params.matchedUserId ?? params.id;
+  const rawId = Array.isArray(routeValue) ? routeValue[0] : routeValue;
   const matchedUserId = Number(rawId);
-  const [match, setMatch] = useState<CookingMatch | null>(null);
+  const cachedMatch = peekScreenCache("matches")?.find(
+    (item) => item.matchedUserId === matchedUserId,
+  );
+  const [match, setMatch] = useState<CookingMatch | null>(cachedMatch ?? null);
   const [recipes, setRecipes] = useState<CollaborativeMeal[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!cachedMatch);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState("");
   const [recipeError, setRecipeError] = useState("");
+  const requestedRecipes = useRef(false);
 
   const loadMatch = useCallback(async () => {
     if (!Number.isInteger(matchedUserId) || matchedUserId <= 0) {
@@ -42,7 +50,7 @@ export default function MatchDetailsScreen() {
       setLoading(false);
       return;
     }
-    setLoading(true);
+    if (!match) setLoading(true);
     setError("");
     try {
       setMatch(await getCookingMatch(matchedUserId));
@@ -55,11 +63,11 @@ export default function MatchDetailsScreen() {
     } finally {
       setLoading(false);
     }
-  }, [matchedUserId]);
+  }, [matchedUserId, match]);
 
   useEffect(() => {
-    void loadMatch();
-  }, [loadMatch]);
+    if (!match) void loadMatch();
+  }, [loadMatch, match]);
 
   const createRecipes = async () => {
     setGenerating(true);
@@ -77,6 +85,12 @@ export default function MatchDetailsScreen() {
     }
   };
 
+  useEffect(() => {
+    if (!match || requestedRecipes.current) return;
+    requestedRecipes.current = true;
+    void createRecipes();
+  }, [match]);
+
   if (loading) {
     return (
       <View style={styles.centered}>
@@ -93,11 +107,8 @@ export default function MatchDetailsScreen() {
         <Text style={styles.error}>
           {error || "No useful meal is available for this match."}
         </Text>
-        <Pressable
-          style={styles.secondaryButton}
-          onPress={() => void loadMatch()}
-        >
-          <Text style={styles.secondaryButtonText}>Try again</Text>
+        <Pressable style={styles.secondaryButton} onPress={() => router.replace("/(tabs)/discover")}>
+          <Text style={styles.secondaryButtonText}>Back to Discover</Text>
         </Pressable>
       </View>
     );
@@ -152,15 +163,12 @@ export default function MatchDetailsScreen() {
 
       {recipes.length === 0 ? (
         <View style={styles.generatorCard}>
-          <Text style={styles.generatorEyebrow}>READY TO COOK?</Text>
+          <Text style={styles.generatorEyebrow}>COOKING IDEAS</Text>
           <Text style={styles.generatorTitle}>
-            Turn this match into 3 complete recipes
+            Preparing the cooking steps
           </Text>
           <Text style={styles.generatorCopy}>
-            Kai Pool uses both food pools and your selected food cultures to
-            write ingredients and simple instructions. The result is cached, so
-            revisiting it will not create another AI recipe unless either food
-            pool changes.
+            You can review the match above while the full cooking ideas load.
           </Text>
           <View style={styles.previewList}>
             {match.possibleMeals.map((meal, index) => (
@@ -199,7 +207,7 @@ export default function MatchDetailsScreen() {
             <View style={styles.recipeHeadingCopy}>
               <Text style={styles.eyebrow}>YOUR SHARED MENU</Text>
               <Text style={styles.sectionTitle}>
-                Three ways to cook together
+                Your cooking plan
               </Text>
             </View>
             <View style={styles.savedPill}>
@@ -337,7 +345,7 @@ const styles = StyleSheet.create({
     fontWeight: "900",
   },
   generatorCopy: { color: "#d6e7dc", lineHeight: 21 },
-  previewList: { gap: 9 },
+  previewList: { display: "none", gap: 9 },
   previewRow: {
     flexDirection: "row",
     alignItems: "center",

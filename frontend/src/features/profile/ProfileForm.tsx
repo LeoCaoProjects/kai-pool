@@ -24,6 +24,7 @@ type Props = {
   submitLabel: string;
   completeOnboarding?: boolean;
   onSaved?: () => void;
+  showHeading?: boolean;
 };
 
 export default function ProfileForm({
@@ -31,6 +32,7 @@ export default function ProfileForm({
   submitLabel,
   completeOnboarding = false,
   onSaved,
+  showHeading = true,
 }: Props) {
   const { user, updateUser } = useAuth();
   const [name, setName] = useState("");
@@ -107,14 +109,16 @@ export default function ProfileForm({
   };
   return (
     <View style={styles.wrap}>
-      <View style={styles.heading}>
-        <Text style={sharedStyles.display}>{title}</Text>
-        {completeOnboarding ? (
-          <Text style={sharedStyles.body}>
-            Set up your profile to connect with your local food community.
-          </Text>
-        ) : null}
-      </View>
+      {showHeading ? (
+        <View style={styles.heading}>
+          <Text style={sharedStyles.display}>{title}</Text>
+          {completeOnboarding ? (
+            <Text style={sharedStyles.body}>
+              Set up your profile to connect with your local food community.
+            </Text>
+          ) : null}
+        </View>
+      ) : null}
       <View style={styles.avatarWrap}>
         {user?.profileImageUrl ? (
           <Image source={{ uri: user.profileImageUrl }} style={styles.avatar} />

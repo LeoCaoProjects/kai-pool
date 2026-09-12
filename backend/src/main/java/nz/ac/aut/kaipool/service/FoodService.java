@@ -124,6 +124,20 @@ public class FoodService {
     }
 
     @Transactional
+    public List<FoodResponse> createFoods(String email, List<CreateFoodRequest> requests) {
+        User owner = userService.getRequiredByEmail(email);
+        List<Food> foods = requests.stream()
+                .map(request -> new Food(
+                        owner,
+                        request.name().trim(),
+                        cleanOptional(request.imageUrl()),
+                        cleanOptional(request.quantity()),
+                        request.availability()))
+                .toList();
+        return foodRepository.saveAll(foods).stream().map(this::toResponse).toList();
+    }
+
+    @Transactional
     public FoodResponse updateFood(String email, Long id, UpdateFoodRequest request) {
         Food food = getOwnedFood(email, id);
         ensureNotClaimed(food);

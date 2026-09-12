@@ -3,14 +3,14 @@ import { CameraView, useCameraPermissions } from "expo-camera";
 import * as ImagePicker from "expo-image-picker";
 import { router, useFocusEffect } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Animated,
   Easing,
+  findNodeHandle,
   Image,
   Keyboard,
-  KeyboardAvoidingView,
   Linking,
   PanResponder,
   Platform,
@@ -28,10 +28,11 @@ import {
 } from "react-native-safe-area-context";
 
 import { ApiError } from "../../api/client";
-import { createFood } from "../../api/foods";
+import { createFoods } from "../../api/foods";
 import { scanFood } from "../../api/scan";
 import type { FoodItem } from "../../types/models";
 import { colors } from "../../ui/theme";
+import { KaiTabBarPreview } from "../../ui/KaiTabBar";
 import FoodPoolScreen from "../food/FoodPoolScreen";
 
 type CapturedImage = {
@@ -56,6 +57,9 @@ export default function ScanScreen() {
   const cameraRef = useRef<CameraView>(null);
   const analysisRequestId = useRef(0);
   const sheetTranslateY = useRef(new Animated.Value(700)).current;
+  const keyboardLift = useRef(new Animated.Value(0)).current;
+  const keyboardVisible = useRef(false);
+  const inputTargets = useRef(new Set<string>());
   const scanExitX = useRef(new Animated.Value(0)).current;
   const sheetPosition = useRef(0);
   const sheetDragStart = useRef(0);
@@ -66,6 +70,7 @@ export default function ScanScreen() {
   const [torchEnabled, setTorchEnabled] = useState(false);
   const [image, setImage] = useState<CapturedImage | null>(null);
   const [items, setItems] = useState<DraftFood[]>([]);
+  const [invalidNameIds, setInvalidNameIds] = useState<number[]>([]);
   const [analysed, setAnalysed] = useState(false);
   const [capturing, setCapturing] = useState(false);
   const [analysing, setAnalysing] = useState(false);
@@ -81,6 +86,49 @@ export default function ScanScreen() {
   const busy = capturing || analysing || saving || transitioning;
   const collapsedSheetY = Math.min(screenHeight * 0.36, 330);
   transitioningRef.current = transitioning;
+
+  useEffect(() => {
+    const showEvent =
+      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow";
+    const hideEvent =
+      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide";
+    const showSubscription = Keyboard.addListener(showEvent, (event) => {
+      keyboardVisible.current = true;
+      if (Platform.OS !== "ios") return;
+      Animated.timing(keyboardLift, {
+        duration: event.duration || 250,
+        toValue: -Math.min(72, event.endCoordinates.height * 0.22),
+        useNativeDriver: true,
+      }).start();
+    });
+    const hideSubscription = Keyboard.addListener(hideEvent, (event) => {
+      keyboardVisible.current = false;
+      if (Platform.OS !== "ios") return;
+      Animated.timing(keyboardLift, {
+        duration: event.duration || 220,
+        toValue: 0,
+        useNativeDriver: true,
+      }).start();
+    });
+    return () => {
+      showSubscription.remove();
+      hideSubscription.remove();
+    };
+  }, [keyboardLift]);
+
+  const registerInput = (input: TextInput | null) => {
+    const handle = findNodeHandle(input);
+    if (handle != null) inputTargets.current.add(`${handle}`);
+  };
+
+  const handleScreenTouch = (target: string | number) => {
+    if (
+      keyboardVisible.current &&
+      !inputTargets.current.has(`${target}`)
+    ) {
+      Keyboard.dismiss();
+    }
+  };
 
   const sheetPanResponder = PanResponder.create({
     onMoveShouldSetPanResponder: (_, gesture) =>
@@ -130,6 +178,10 @@ export default function ScanScreen() {
       scanExitX.setValue(0);
       setScreenFocused(true);
       return () => {
+        Keyboard.dismiss();
+        keyboardLift.setValue(0);
+        keyboardVisible.current = false;
+        inputTargets.current.clear();
         analysisRequestId.current += 1;
         sheetTranslateY.setValue(700);
         sheetPosition.current = 0;
@@ -138,6 +190,7 @@ export default function ScanScreen() {
         setTorchEnabled(false);
         setImage(null);
         setItems([]);
+        setInvalidNameIds([]);
         setAnalysed(false);
         setCapturing(false);
         setAnalysing(false);
@@ -149,7 +202,7 @@ export default function ScanScreen() {
         setTransitioning(false);
         setPoolPreviewFoods([]);
       };
-    }, [scanExitX, sheetTranslateY]),
+    }, [keyboardLift, scanExitX, sheetTranslateY]),
   );
 
   const showSheet = (position: number) => {
@@ -181,6 +234,7 @@ export default function ScanScreen() {
     const requestId = ++analysisRequestId.current;
     setImage(capturedImage);
     setItems([]);
+    setInvalidNameIds([]);
     setAnalysed(false);
     setSaved(false);
     setError("");
@@ -232,7 +286,7 @@ export default function ScanScreen() {
     setError("");
     try {
       const photo = await cameraRef.current.takePictureAsync({
-        quality: 0.65,
+        quality: 0.4,
         shutterSound: true,
       });
       if (!photo) throw new Error("No photo returned");
@@ -263,7 +317,7 @@ export default function ScanScreen() {
       }
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ["images"],
-        quality: 0.65,
+        quality: 0.4,
       });
       if (!result.canceled) {
         setGalleryOpen(false);
@@ -318,6 +372,9 @@ export default function ScanScreen() {
         item.id === id ? { ...item, [field]: value } : item,
       ),
     );
+    if (field === "name" && value.trim()) {
+      setInvalidNameIds((current) => current.filter((itemId) => itemId !== id));
+    }
     setSaved(false);
   };
 
@@ -334,6 +391,7 @@ export default function ScanScreen() {
 
   const removeItem = (id: number) => {
     setItems((current) => current.filter((item) => item.id !== id));
+    setInvalidNameIds((current) => current.filter((itemId) => itemId !== id));
     setSaved(false);
   };
 
@@ -343,8 +401,12 @@ export default function ScanScreen() {
       setError("Add at least one food item before saving.");
       return;
     }
-    if (items.some((item) => !item.name.trim())) {
-      setError("Each item needs a name.");
+    const blankNameIds = items
+      .filter((item) => !item.name.trim())
+      .map((item) => item.id);
+    if (blankNameIds.length > 0) {
+      setInvalidNameIds(blankNameIds);
+      setError("");
       return;
     }
 
@@ -352,17 +414,14 @@ export default function ScanScreen() {
     setSaving(true);
     setError("");
     try {
-      const savedFoods: FoodItem[] = [];
-      for (const item of items) {
-        savedFoods.push(
-          await createFood({
-            name: item.name.trim(),
-            quantity: item.quantity.trim() || null,
+      const savedFoods = await createFoods(
+        items.map((item) => ({
+            name: item.name.trim().slice(0, 150),
+            quantity: item.quantity.trim().slice(0, 100) || null,
             imageUrl: null,
-            availability: "PRIVATE",
-          }),
-        );
-      }
+            availability: "COOK_TOGETHER",
+          })),
+      );
       setPoolPreviewFoods(savedFoods);
       setSaved(true);
       setMessage(
@@ -386,6 +445,7 @@ export default function ScanScreen() {
 
   const reset = () => {
     if (busy) return;
+    Keyboard.dismiss();
     Animated.timing(sheetTranslateY, {
       duration: 220,
       toValue: 700,
@@ -393,6 +453,7 @@ export default function ScanScreen() {
     }).start(() => {
       setImage(null);
       setItems([]);
+      setInvalidNameIds([]);
       setAnalysed(false);
       setCameraReady(false);
       setSaved(false);
@@ -410,7 +471,7 @@ export default function ScanScreen() {
   if (!permission) {
     return (
       <View style={styles.loadingScreen}>
-        <StatusBar style="light" />
+        {screenFocused ? <StatusBar style="light" /> : null}
         <ActivityIndicator color="#FFFFFF" size="large" />
       </View>
     );
@@ -419,7 +480,7 @@ export default function ScanScreen() {
   if (!permission.granted) {
     return (
       <View style={styles.permissionScreen}>
-        <StatusBar style="light" />
+        {screenFocused ? <StatusBar style="light" /> : null}
         <Pressable
           accessibilityLabel="Leave scanner"
           onPress={leaveScanner}
@@ -455,10 +516,7 @@ export default function ScanScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : undefined}
-      style={styles.screen}
-    >
+    <View style={styles.screen}>
       {transitioning ? (
         <SafeAreaView
           edges={["top", "bottom"]}
@@ -468,21 +526,20 @@ export default function ScanScreen() {
           <View style={styles.poolBehindContent}>
             <FoodPoolScreen previewFoods={poolPreviewFoods} />
           </View>
-          <FoodPoolTabBarPreview />
+          <KaiTabBarPreview activeRoute="food-pool" />
         </SafeAreaView>
       ) : null}
 
       <Animated.View
+        onTouchStart={(event) => handleScreenTouch(event.nativeEvent.target)}
         style={[
           styles.scanForeground,
           { transform: [{ translateX: scanExitX }] },
         ]}
       >
-      <StatusBar
-        backgroundColor="transparent"
-        style={transitioning ? "dark" : "light"}
-        translucent
-      />
+      {screenFocused ? (
+        <StatusBar style={transitioning ? "dark" : "light"} />
+      ) : null}
 
       {image ? (
         <Image source={{ uri: image.uri }} style={StyleSheet.absoluteFill} />
@@ -593,10 +650,14 @@ export default function ScanScreen() {
             styles.resultSheet,
             {
               paddingBottom: Math.max(insets.bottom, 14),
-              transform: [{ translateY: sheetTranslateY }],
+              transform: [
+                { translateY: sheetTranslateY },
+                { translateY: keyboardLift },
+              ],
             },
           ]}
         >
+          <View pointerEvents="none" style={styles.sheetBottomFill} />
           <View
             {...sheetPanResponder.panHandlers}
             accessibilityHint="Swipe up to expand or down to collapse scan results"
@@ -644,7 +705,9 @@ export default function ScanScreen() {
           ) : (
             <>
               <ScrollView
+                automaticallyAdjustKeyboardInsets
                 contentContainerStyle={styles.resultsContent}
+                keyboardDismissMode="interactive"
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator={false}
                 style={styles.resultsScroll}
@@ -679,7 +742,9 @@ export default function ScanScreen() {
                   <FoodResultCard
                     index={index}
                     item={item}
+                    invalidName={invalidNameIds.includes(item.id)}
                     key={item.id}
+                    onInputRef={registerInput}
                     onRemove={() => removeItem(item.id)}
                     onUpdate={(field, value) =>
                       updateItem(item.id, field, value)
@@ -749,34 +814,6 @@ export default function ScanScreen() {
         </Animated.View>
       ) : null}
       </Animated.View>
-    </KeyboardAvoidingView>
-  );
-}
-
-function FoodPoolTabBarPreview() {
-  const tabs: Array<{
-    icon: keyof typeof Ionicons.glyphMap;
-    label: string;
-    active?: boolean;
-  }> = [
-    { active: true, icon: "file-tray-stacked-outline", label: "Food Pool" },
-    { icon: "compass-outline", label: "Discover" },
-    { icon: "scan-outline", label: "Scan" },
-    { icon: "people-outline", label: "Connections" },
-    { icon: "person-outline", label: "Profile" },
-  ];
-
-  return (
-    <View style={styles.poolPreviewTabs}>
-      {tabs.map((tab) => {
-        const color = tab.active ? colors.primary : "#616862";
-        return (
-          <View key={tab.label} style={styles.poolPreviewTab}>
-            <Ionicons color={color} name={tab.icon} size={23} />
-            <Text style={[styles.poolPreviewLabel, { color }]}>{tab.label}</Text>
-          </View>
-        );
-      })}
     </View>
   );
 }
@@ -869,13 +906,17 @@ function RoundIconButton({
 
 function FoodResultCard({
   index,
+  invalidName,
   item,
   onRemove,
+  onInputRef,
   onUpdate,
 }: {
   index: number;
+  invalidName: boolean;
   item: DraftFood;
   onRemove: () => void;
+  onInputRef: (input: TextInput | null) => void;
   onUpdate: (field: "name" | "quantity", value: string) => void;
 }) {
   const confidence =
@@ -884,7 +925,7 @@ function FoodResultCard({
       : Math.round(item.confidence <= 1 ? item.confidence * 100 : item.confidence);
 
   return (
-    <View style={styles.foodCard}>
+    <View style={[styles.foodCard, invalidName && styles.foodCardInvalid]}>
       <View style={styles.foodCardTop}>
         <View style={styles.foodIcon}>
           <Ionicons color={colors.primary} name="leaf" size={18} />
@@ -903,6 +944,8 @@ function FoodResultCard({
         </Pressable>
       </View>
       <TextInput
+        ref={onInputRef}
+        maxLength={150}
         onChangeText={(value) => onUpdate("name", value)}
         placeholder="Food name"
         placeholderTextColor="#7A817C"
@@ -912,6 +955,8 @@ function FoodResultCard({
       <View style={styles.quantityRow}>
         <Text style={styles.quantityLabel}>Quantity</Text>
         <TextInput
+          ref={onInputRef}
+          maxLength={100}
           onChangeText={(value) => onUpdate("quantity", value)}
           placeholder="e.g. 2 portions"
           placeholderTextColor="#7A817C"
@@ -934,26 +979,6 @@ const styles = StyleSheet.create({
     top: 0,
   },
   poolBehindContent: { flex: 1 },
-  poolPreviewTabs: {
-    alignItems: "center",
-    backgroundColor: colors.background,
-    borderTopColor: colors.outline,
-    borderTopWidth: 1,
-    flexDirection: "row",
-    height: 72,
-    paddingBottom: 10,
-    paddingTop: 8,
-  },
-  poolPreviewTab: {
-    alignItems: "center",
-    flex: 1,
-    gap: 3,
-    justifyContent: "center",
-  },
-  poolPreviewLabel: {
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 11,
-  },
   scanForeground: { backgroundColor: "#000000", flex: 1 },
   loadingScreen: {
     alignItems: "center",
@@ -1116,9 +1141,17 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 30,
     bottom: 0,
     height: "76%",
-    overflow: "hidden",
+    overflow: "visible",
     position: "absolute",
     width: "100%",
+  },
+  sheetBottomFill: {
+    backgroundColor: colors.surface,
+    bottom: -84,
+    height: 86,
+    left: 0,
+    position: "absolute",
+    right: 0,
   },
   sheetDragArea: {
     alignItems: "center",
@@ -1245,6 +1278,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     gap: 10,
     padding: 14,
+  },
+  foodCardInvalid: {
+    borderColor: colors.error,
+    borderWidth: 2,
   },
   foodCardTop: { alignItems: "center", flexDirection: "row" },
   foodIcon: {

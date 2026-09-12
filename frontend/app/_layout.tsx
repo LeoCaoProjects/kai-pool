@@ -27,7 +27,7 @@ export default function RootLayout() {
   if (!loaded) return null;
   return (
     <SafeAreaProvider>
-      <StatusBar style="dark" backgroundColor="#FDF9F0" />
+      <StatusBar style="dark" />
       <AuthProvider>
         <Stack
           screenOptions={{
@@ -40,14 +40,6 @@ export default function RootLayout() {
             options={{
               ...detailOptions,
               title: "Cooking match",
-              headerBackTitle: "Discover",
-            }}
-          />
-          <Stack.Screen
-            name="marketplace/[listingId]"
-            options={{
-              ...detailOptions,
-              title: "Giveaway details",
               headerBackTitle: "Discover",
             }}
           />

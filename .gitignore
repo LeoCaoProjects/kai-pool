@@ -1,5 +1,4 @@
-.env
-.env.*
+.env*
 !.env.example
 
 node_modules/
@@ -9,6 +8,7 @@ web-build/
 
 .gradle/
 build/
+bin/
 out/
 *.class
 

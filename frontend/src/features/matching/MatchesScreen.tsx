@@ -1,8 +1,10 @@
-import { useCallback, useMemo, useState } from "react";
+import Ionicons from "@expo/vector-icons/Ionicons";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useFocusEffect, useRouter } from "expo-router";
 import {
   ActivityIndicator,
   Alert,
+  Animated,
   Image,
   Pressable,
   RefreshControl,
@@ -17,9 +19,16 @@ import {
   requestCookingConnection,
   respondToCookingConnection,
 } from "../../api/connections";
-import { getCookingMatches } from "../../api/matches";
+import { getCookingMatch, getCookingMatches } from "../../api/matches";
+import {
+  loadScreenCache,
+  peekScreenCache,
+  updateScreenCache,
+} from "../../api/screenCache";
 import type { CookingConnection, CookingMatch } from "../../types/models";
 import { colors, sharedStyles } from "../../ui/theme";
+import { buildApiUrl } from "../../config/api";
+import { LinearGradient } from "expo-linear-gradient";
 import { useAuth } from "../auth/AuthContext";
 import { PersonSummary } from "./MatchingComponents";
 
@@ -28,40 +37,68 @@ export type MatchMode = "discover" | "requests" | "connections";
 export function MatchesScreen({
   initialMode = "discover",
   modes = ["discover", "requests", "connections"],
+  showHeader = true,
+  stickyTabs = false,
 }: {
   initialMode?: MatchMode;
   modes?: MatchMode[];
+  showHeader?: boolean;
+  stickyTabs?: boolean;
 }) {
   const router = useRouter();
   const { user } = useAuth();
   const [mode, setMode] = useState<MatchMode>(initialMode);
-  const [matches, setMatches] = useState<CookingMatch[]>([]);
-  const [connections, setConnections] = useState<CookingConnection[]>([]);
+  const cachedMatches = peekScreenCache("matches");
+  const cachedConnections = peekScreenCache("connections");
+  const [matches, setMatches] = useState<CookingMatch[]>(cachedMatches ?? []);
+  const [connections, setConnections] = useState<CookingConnection[]>(
+    cachedConnections ?? [],
+  );
   const [busyId, setBusyId] = useState<number | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [responding, setResponding] = useState<{
+    id: number;
+    status: "ACCEPTED" | "DECLINED";
+  } | null>(null);
+  const requestedMatchMetadata = useRef(new Set<number>());
+  const needsDiscover = modes.includes("discover");
+  const [loading, setLoading] = useState(
+    !cachedConnections || (needsDiscover && !cachedMatches),
+  );
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
   const load = useCallback(async (refresh = false) => {
-    refresh ? setRefreshing(true) : setLoading(true);
+    const hasVisibleData = peekScreenCache("connections") !== undefined
+      && (!needsDiscover || peekScreenCache("matches") !== undefined);
+    if (refresh) setRefreshing(true);
+    else if (!hasVisibleData) setLoading(true);
     setError("");
     try {
-      const [foundMatches, foundConnections] = await Promise.all([
-        getCookingMatches(),
-        getCookingConnections(),
-      ]);
-      setMatches(foundMatches);
-      setConnections(foundConnections);
+      if (needsDiscover) {
+        const [foundConnections, foundMatches] = await Promise.all([
+          loadScreenCache("connections", getCookingConnections, true),
+          loadScreenCache("matches", getCookingMatches, true),
+        ]);
+        setConnections(foundConnections);
+        setMatches(foundMatches);
+      } else {
+        const foundConnections = await loadScreenCache(
+          "connections", getCookingConnections, true,
+        );
+        setConnections(foundConnections);
+      }
     } catch (caught) {
-      setError(
-        caught instanceof ApiError
-          ? caught.message
-          : "Could not load cooking matches.",
-      );
+      if (!hasVisibleData) {
+        setError(
+          caught instanceof ApiError
+            ? caught.message
+            : needsDiscover ? "Could not load cooking matches." : "Could not load connections.",
+        );
+      }
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [needsDiscover]);
   useFocusEffect(
     useCallback(() => {
       void load();
@@ -84,6 +121,38 @@ export function MatchesScreen({
       ),
     [connections],
   );
+  const variedMatches = useMemo(() => diversifyMatches(matches), [matches]);
+  const matchByUser = useMemo(
+    () => new Map(variedMatches.map((match) => [match.matchedUserId, match])),
+    [variedMatches],
+  );
+  const visiblePending = pending;
+  const discoverMatches = useMemo(
+    () => variedMatches.filter((match) => !connectionByUser.has(match.matchedUserId)),
+    [connectionByUser, variedMatches],
+  );
+  useEffect(() => {
+    if (!needsDiscover) return;
+    const missingIds = [...pending, ...accepted]
+      .map((item) => item.otherUserId)
+      .filter((id) => !matchByUser.has(id) && !requestedMatchMetadata.current.has(id));
+    if (missingIds.length === 0) return;
+    missingIds.forEach((id) => requestedMatchMetadata.current.add(id));
+    void Promise.allSettled(missingIds.map((id) => getCookingMatch(id))).then((results) => {
+      const recovered = results.flatMap((result) => result.status === "fulfilled" ? [result.value] : []);
+      if (recovered.length === 0) return;
+      setMatches((current) => {
+        const next = [...current];
+        recovered.forEach((match) => {
+          const index = next.findIndex((item) => item.matchedUserId === match.matchedUserId);
+          if (index >= 0) next[index] = match;
+          else next.push(match);
+        });
+        updateScreenCache("matches", next);
+        return next;
+      });
+    });
+  }, [accepted, matchByUser, needsDiscover, pending]);
   const send = async (match: CookingMatch) => {
     setBusyId(match.matchedUserId);
     try {
@@ -91,6 +160,10 @@ export function MatchesScreen({
       setConnections((current) => [
         created,
         ...current.filter((item) => item.id !== created.id),
+      ]);
+      updateScreenCache("connections", [
+        created,
+        ...connections.filter((item) => item.id !== created.id),
       ]);
       Alert.alert(
         "Request sent",
@@ -110,22 +183,37 @@ export function MatchesScreen({
     status: "ACCEPTED" | "DECLINED",
   ) => {
     setBusyId(connection.id);
+    setResponding({ id: connection.id, status });
+    const before = peekScreenCache("connections") ?? connections;
+    const optimistic = status === "DECLINED"
+      ? before.filter((item) => item.id !== connection.id)
+      : before.map((item) => item.id === connection.id
+          ? { ...item, status: "ACCEPTED" as const, respondedAt: new Date().toISOString() }
+          : item);
+    setConnections(optimistic);
+    updateScreenCache("connections", optimistic);
     try {
       const updated = await respondToCookingConnection(connection.id, status);
-      setConnections((current) =>
-        current.map((item) => (item.id === updated.id ? updated : item)),
-      );
+      const current = peekScreenCache("connections") ?? before;
+      const next = status === "DECLINED"
+        ? current.filter((item) => item.id !== updated.id)
+        : current.map((item) => (item.id === updated.id ? updated : item));
+      setConnections(next);
+      updateScreenCache("connections", next);
       if (status === "ACCEPTED") router.push(`/connection/${updated.id}`);
     } catch (caught) {
+      setConnections(before);
+      updateScreenCache("connections", before);
       Alert.alert(
         "Could not respond",
         caught instanceof ApiError ? caught.message : "Please try again.",
       );
     } finally {
       setBusyId(null);
+      setResponding(null);
     }
   };
-  if (loading)
+  if (loading && showHeader)
     return (
       <View style={styles.center}>
         <ActivityIndicator color={colors.primary} />
@@ -147,7 +235,11 @@ export function MatchesScreen({
   return (
     <ScrollView
       style={sharedStyles.screen}
-      contentContainerStyle={styles.content}
+      stickyHeaderIndices={stickyTabs && modes.length > 1 ? [showHeader ? 1 : 0] : undefined}
+      contentContainerStyle={[
+        styles.content,
+        !showHeader && styles.embeddedContent,
+      ]}
       refreshControl={
         <RefreshControl
           refreshing={refreshing}
@@ -155,11 +247,14 @@ export function MatchesScreen({
         />
       }
     >
-      <View style={styles.header}>
-        <Text style={sharedStyles.headline}>{title}</Text>
-        <Text style={styles.subtitle}>{subtitle}</Text>
-      </View>
+      {showHeader ? (
+        <View style={styles.header}>
+          <Text style={sharedStyles.headline}>{title}</Text>
+          <Text style={styles.subtitle}>{subtitle}</Text>
+        </View>
+      ) : null}
       {modes.length > 1 ? (
+        <View style={stickyTabs ? styles.stickyTabs : undefined}>
         <View style={styles.tabs}>
           {modes.map((value) => (
             <Pressable
@@ -167,17 +262,29 @@ export function MatchesScreen({
               onPress={() => setMode(value)}
               style={[styles.tab, mode === value && styles.activeTab]}
             >
+              <Ionicons
+                color={mode === value ? "#FFFFFF" : colors.textMuted}
+                name={
+                  value === "requests"
+                    ? "mail-unread-outline"
+                    : value === "connections"
+                      ? "checkmark-circle-outline"
+                      : "compass-outline"
+                }
+                size={17}
+              />
               <Text
                 style={[styles.tabText, mode === value && styles.activeTabText]}
               >
                 {value === "requests"
-                  ? `Requests${pending.length ? ` ${pending.length}` : ""}`
+                  ? `Requests${visiblePending.length ? ` ${visiblePending.length}` : ""}`
                   : value === "connections"
                     ? `Connected${accepted.length ? ` ${accepted.length}` : ""}`
                     : "Discover"}
               </Text>
             </Pressable>
           ))}
+        </View>
         </View>
       ) : null}
       {error ? (
@@ -187,7 +294,21 @@ export function MatchesScreen({
       ) : null}
       {!error && mode === "discover" ? (
         <>
-          {matches.length === 0 ? (
+          {loading && variedMatches.length === 0 ? (
+            <View style={styles.skeletonList}>
+              <MatchSkeleton />
+              <MatchSkeleton />
+            </View>
+          ) : null}
+          {discoverMatches.length > 0 ? (
+            <View style={styles.listHeading}>
+              <Text style={styles.listEyebrow}>NEARBY COOKS</Text>
+              <Text style={styles.listCount}>
+                {discoverMatches.length} match{discoverMatches.length === 1 ? "" : "es"}
+              </Text>
+            </View>
+          ) : null}
+          {!loading && discoverMatches.length === 0 ? (
             <Empty
               text={
                 user?.latitude == null
@@ -196,14 +317,18 @@ export function MatchesScreen({
               }
             />
           ) : (
-            matches.map((match, index) => (
+            discoverMatches.map((match) => (
               <MatchCard
                 key={match.matchedUserId}
                 match={match}
-                rank={index + 1}
                 existing={connectionByUser.get(match.matchedUserId)}
                 busy={busyId === match.matchedUserId}
-                onDetails={() => router.push(`/match/${match.matchedUserId}`)}
+                onDetails={() =>
+                  router.push({
+                    pathname: "/match/[matchedUserId]",
+                    params: { matchedUserId: String(match.matchedUserId) },
+                  })
+                }
                 onRequest={() => void send(match)}
               />
             ))
@@ -212,51 +337,44 @@ export function MatchesScreen({
       ) : null}
       {!error && mode === "requests" ? (
         <>
-          {pending.length === 0 ? (
+          {loading && visiblePending.length === 0 ? (
+            <View style={styles.skeletonList}><MatchSkeleton /><MatchSkeleton /></View>
+          ) : visiblePending.length === 0 ? (
             <Empty text="No pending cooking requests." />
           ) : (
-            pending.map((item) => (
-              <View key={item.id} style={styles.connectionCard}>
-                <PersonSummary
-                  name={item.otherUserName}
-                  bio={item.otherUserBio}
-                  profileImageUrl={item.otherUserProfileImageUrl}
-                  cultures={item.otherUserFoodCultures}
-                />
-                <Text style={styles.requestText}>
-                  {item.incoming
-                    ? "Invited you to cook together."
-                    : "Waiting for their response."}
-                </Text>
-                {item.incoming ? (
-                  <View style={styles.actions}>
-                    <Secondary
-                      title="Decline"
-                      disabled={busyId === item.id}
-                      onPress={() => void respond(item, "DECLINED")}
-                    />
-                    <Primary
-                      title="Accept"
-                      disabled={busyId === item.id}
-                      onPress={() => void respond(item, "ACCEPTED")}
-                    />
-                  </View>
-                ) : null}
-              </View>
+            visiblePending.map((item) => (
+              <RequestCard
+                key={item.id}
+                busy={busyId === item.id}
+                busyAction={responding?.id === item.id ? responding.status : null}
+                connection={item}
+                match={matchByUser.get(item.otherUserId)}
+                onAccept={() => void respond(item, "ACCEPTED")}
+                onDecline={() => void respond(item, "DECLINED")}
+              />
             ))
           )}
         </>
       ) : null}
       {!error && mode === "connections" ? (
         <>
-          {accepted.length === 0 ? (
+          {loading && accepted.length === 0 ? (
+            <View style={styles.skeletonList}><MatchSkeleton /><MatchSkeleton /></View>
+          ) : accepted.length === 0 ? (
             <Empty text="Accepted cooking connections will appear here." />
           ) : (
-            accepted.map((item) => (
+            accepted.map((item) => {
+              const match = matchByUser.get(item.otherUserId);
+              return (
+              <View key={item.id}>
+              <ConnectionMatchCard
+                connection={item}
+                match={match}
+                onOpen={() => router.push(`/connection/${item.id}`)}
+              />
               <Pressable
-                key={item.id}
                 onPress={() => router.push(`/connection/${item.id}`)}
-                style={styles.connectionCard}
+                style={[styles.connectionCard, styles.legacyConnectionCard]}
               >
                 <PersonSummary
                   name={item.otherUserName}
@@ -266,7 +384,9 @@ export function MatchesScreen({
                 />
                 <Text style={styles.connected}>Plan your cook-up →</Text>
               </Pressable>
-            ))
+              </View>
+              );
+            })
           )}
         </>
       ) : null}
@@ -276,65 +396,62 @@ export function MatchesScreen({
 
 function MatchCard({
   match,
-  rank,
   existing,
   busy,
   onDetails,
   onRequest,
 }: {
   match: CookingMatch;
-  rank: number;
   existing?: CookingConnection;
   busy: boolean;
   onDetails: () => void;
   onRequest: () => void;
 }) {
-  const meal = match.possibleMeals[0];
-  if (!meal) return null;
+  const meal = match?.possibleMeals[0];
+  const mealImage = meal?.imageUrl && meal.imageSource === "Pexels"
+    ? meal.imageUrl.startsWith("/")
+      ? buildApiUrl(meal.imageUrl)
+      : meal.imageUrl
+    : null;
   return (
     <View style={styles.matchCard}>
-      <View style={styles.cardBody}>
-        <View style={styles.meta}>
-          <Text style={styles.rank}>#{rank} match</Text>
-          <Text style={styles.distance}>
-            About {match.distanceKm.toFixed(1)} km away
-          </Text>
-        </View>
-        <PersonSummary
-          name={match.matchedUserName}
-          bio={match.matchedUserBio}
-          profileImageUrl={match.matchedUserProfileImageUrl}
-          cultures={match.matchedUserFoodCultures}
-        />
-        <Ingredient
-          label="THEY HAVE"
-          value={match.theirContributions
-            .map((food) =>
-              food.quantity ? `${food.name} (${food.quantity})` : food.name,
-            )
-            .join(" · ")}
-        />
-        <Ingredient
-          label="YOU MATCH WITH"
-          value={match.yourContributions
-            .map((food) =>
-              food.quantity ? `${food.name} (${food.quantity})` : food.name,
-            )
-            .join(" · ")}
-        />
-        <View style={styles.mealRow}>
-          {meal.imageUrl ? (
-            <Image source={{ uri: meal.imageUrl }} style={styles.mealImage} />
+      {meal ? (
+        <View style={styles.mealFeature}>
+          {mealImage ? (
+            <Image source={{ uri: mealImage }} style={styles.mealImage} />
           ) : (
-            <View style={styles.mealImage} />
+            <View style={[styles.mealImage, styles.mealImageFallback]}>
+              <Ionicons color="#506AA8" name="restaurant-outline" size={28} />
+            </View>
           )}
-          <View style={styles.mealCopy}>
-            <Text style={styles.sectionLabel}>SUGGESTED MEAL</Text>
-            <Text style={styles.mealName}>{meal.mealName}</Text>
-            <Text numberOfLines={2} style={styles.mealDescription}>
-              {meal.description}
-            </Text>
-          </View>
+          <LinearGradient
+            colors={["rgba(10,24,17,0.42)", "transparent", "rgba(10,24,17,0.92)"]}
+            locations={[0, 0.42, 1]}
+            pointerEvents="none"
+            style={styles.mealGradient}
+          >
+            <View style={styles.imageMetaRow}>
+              <View style={styles.imageMetaPill}>
+                <Ionicons color="#FFFFFF" name="location-outline" size={13} />
+                <Text style={styles.imageMetaText}>{match.distanceKm.toFixed(1)} km</Text>
+              </View>
+              <View style={styles.imageMetaPill}>
+                <Ionicons color="#FFFFFF" name="sparkles-outline" size={13} />
+                <Text style={styles.imageMetaText}>{match.matchScore}% match</Text>
+              </View>
+            </View>
+            <View style={styles.mealTitleBlock}>
+              <Text numberOfLines={2} style={styles.mealName}>{meal.mealName}</Text>
+            </View>
+          </LinearGradient>
+        </View>
+      ) : null}
+      <View style={styles.cardBody}>
+        <View style={styles.cookIdentity}>
+          <Text numberOfLines={1} style={styles.cookName}>Cook with {match.matchedUserName}</Text>
+          <Text numberOfLines={1} style={styles.cookInspiration}>
+            {meal?.culturalOrigin}
+          </Text>
         </View>
         <View style={styles.actions}>
           <Secondary title="Details" onPress={onDetails} />
@@ -355,13 +472,233 @@ function MatchCard({
     </View>
   );
 }
-function Ingredient({ label, value }: { label: string; value: string }) {
+
+function RequestCard({
+  busy,
+  busyAction,
+  connection,
+  match,
+  onAccept,
+  onDecline,
+}: {
+  busy: boolean;
+  busyAction: "ACCEPTED" | "DECLINED" | null;
+  connection: CookingConnection;
+  match?: CookingMatch;
+  onAccept: () => void;
+  onDecline: () => void;
+}) {
+  const meal = match?.possibleMeals[0];
+  const imageUrl = meal?.imageUrl && meal.imageSource === "Pexels"
+    ? meal.imageUrl.startsWith("/") ? buildApiUrl(meal.imageUrl) : meal.imageUrl
+    : null;
   return (
-    <View style={styles.ingredient}>
-      <Text style={styles.sectionLabel}>{label}</Text>
-      <Text style={styles.ingredientText}>{value}</Text>
+    <View style={styles.matchCard}>
+      <View style={styles.mealFeature}>
+        {imageUrl ? (
+          <Image source={{ uri: imageUrl }} style={styles.mealImage} />
+        ) : (
+          <View style={[styles.mealImage, styles.mealImageFallback]}>
+            <Ionicons color="#506AA8" name="restaurant-outline" size={28} />
+          </View>
+        )}
+        <LinearGradient
+          colors={["rgba(10,24,17,0.42)", "transparent", "rgba(10,24,17,0.92)"]}
+          locations={[0, 0.42, 1]}
+          pointerEvents="none"
+          style={styles.mealGradient}
+        >
+          <View style={styles.imageMetaRow}>
+            <View style={styles.imageMetaPill}>
+              <Ionicons color="#FFFFFF" name="location-outline" size={13} />
+              <Text style={styles.imageMetaText}>
+                {match ? `${match.distanceKm.toFixed(1)} km` : "Nearby"}
+              </Text>
+            </View>
+            <View style={styles.imageMetaPill}>
+              <Ionicons color="#FFFFFF" name="sparkles-outline" size={13} />
+              <Text style={styles.imageMetaText}>{match ? `${match.matchScore}% match` : "Cooking request"}</Text>
+            </View>
+          </View>
+          <Text numberOfLines={2} style={styles.mealName}>{meal?.mealName ?? "Cook together"}</Text>
+        </LinearGradient>
+      </View>
+      <View style={styles.cardBody}>
+        <View style={styles.cookIdentity}>
+          <Text numberOfLines={1} style={styles.cookName}>
+            {connection.incoming
+              ? `${connection.otherUserName} wants to cook with you`
+              : `Request sent to ${connection.otherUserName}`}
+          </Text>
+          <Text numberOfLines={1} style={styles.cookInspiration}>
+            {meal?.culturalOrigin ?? "Plan a meal using both food pools"}
+          </Text>
+        </View>
+        {connection.incoming ? (
+          <View style={styles.actions}>
+            <Secondary
+              title={busyAction === "DECLINED" ? "Declining" : "Decline"}
+              busy={busyAction === "DECLINED"}
+              disabled={busy}
+              onPress={onDecline}
+            />
+            <Primary
+              title={busyAction === "ACCEPTED" ? "Accepting" : "Accept"}
+              disabled={busy}
+              busy={busyAction === "ACCEPTED"}
+              onPress={onAccept}
+            />
+          </View>
+        ) : (
+          <View style={styles.waitingRow}>
+            <Ionicons color={colors.textMuted} name="time-outline" size={16} />
+            <Text style={styles.waitingText}>Waiting for their response</Text>
+          </View>
+        )}
+      </View>
     </View>
   );
+}
+
+function ConnectionMatchCard({
+  connection,
+  match,
+  onOpen,
+}: {
+  connection: CookingConnection;
+  match?: CookingMatch;
+  onOpen: () => void;
+}) {
+  const meal = match?.possibleMeals[0];
+  const imageUrl = meal?.imageUrl && meal.imageSource === "Pexels"
+    ? meal.imageUrl.startsWith("/") ? buildApiUrl(meal.imageUrl) : meal.imageUrl
+    : null;
+  return (
+    <View style={styles.matchCard}>
+      <View style={styles.mealFeature}>
+        {imageUrl ? <Image source={{ uri: imageUrl }} style={styles.mealImage} /> : (
+          <View style={[styles.mealImage, styles.mealImageFallback]}>
+            <Ionicons color="#506AA8" name="restaurant-outline" size={28} />
+          </View>
+        )}
+        <LinearGradient
+          colors={["rgba(10,24,17,0.42)", "transparent", "rgba(10,24,17,0.92)"]}
+          locations={[0, 0.42, 1]}
+          pointerEvents="none"
+          style={styles.mealGradient}
+        >
+          <View style={styles.imageMetaRow}>
+            <View style={styles.imageMetaPill}>
+              <Ionicons color="#FFFFFF" name="location-outline" size={13} />
+              <Text style={styles.imageMetaText}>
+                {match ? `${match.distanceKm.toFixed(1)} km` : "Cooking connection"}
+              </Text>
+            </View>
+            <View style={styles.imageMetaPill}>
+              <Ionicons color="#FFFFFF" name="checkmark-circle-outline" size={13} />
+              <Text style={styles.imageMetaText}>Connected</Text>
+            </View>
+          </View>
+          <Text numberOfLines={2} style={styles.mealName}>{meal?.mealName ?? "Cook together"}</Text>
+        </LinearGradient>
+      </View>
+      <View style={styles.cardBody}>
+        <View style={styles.cookIdentity}>
+          <Text numberOfLines={1} style={styles.cookName}>Cook with {connection.otherUserName}</Text>
+          <Text numberOfLines={1} style={styles.cookInspiration}>
+            {meal?.culturalOrigin ?? "Plan your next shared meal"}
+          </Text>
+        </View>
+        <Pressable onPress={onOpen} style={styles.planButton}>
+          <Text style={styles.planButtonText}>Plan your cook-up</Text>
+          <Ionicons color="#FFFFFF" name="arrow-forward" size={17} />
+        </Pressable>
+      </View>
+    </View>
+  );
+}
+
+function MatchSkeleton() {
+  const pulse = useRef(new Animated.Value(0.55)).current;
+  useEffect(() => {
+    const animation = Animated.loop(Animated.sequence([
+      Animated.timing(pulse, { toValue: 1, duration: 760, useNativeDriver: true }),
+      Animated.timing(pulse, { toValue: 0.55, duration: 760, useNativeDriver: true }),
+    ]));
+    animation.start();
+    return () => animation.stop();
+  }, [pulse]);
+  return (
+    <Animated.View style={[styles.skeletonCard, { opacity: pulse }]}>
+      <View style={styles.skeletonImage}>
+        <View style={styles.skeletonPills}>
+          <View style={styles.skeletonPill} />
+          <View style={styles.skeletonPill} />
+        </View>
+        <View style={styles.skeletonMealName} />
+      </View>
+      <View style={styles.skeletonBody}>
+        <View style={styles.skeletonName} />
+        <View style={styles.skeletonSubtitle} />
+        <View style={styles.skeletonButtons}>
+          <View style={styles.skeletonButton} />
+          <View style={styles.skeletonButton} />
+        </View>
+      </View>
+    </Animated.View>
+  );
+}
+function RemovedIngredientLayout({
+  label,
+  foods,
+  tone,
+}: {
+  label: string;
+  foods: CookingMatch["yourContributions"];
+  tone: "you" | "them";
+}) {
+  return (
+    <View style={styles.ingredient}>
+      <View style={[styles.ingredientMark, tone === "you" ? styles.yourMark : styles.theirMark]} />
+      <View style={styles.ingredientCopy}>
+        <Text style={styles.sectionLabel}>{label}</Text>
+        <Text numberOfLines={2} style={styles.ingredientText}>
+          {foods.slice(0, 4).map((food) =>
+            food.quantity ? `${food.name} (${food.quantity})` : food.name,
+          ).join(" · ")}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+void RemovedIngredientLayout;
+
+function diversifyMatches(matches: CookingMatch[]) {
+  const usedMeals = new Set<string>();
+  const seenUsers = new Set<number>();
+  return matches.flatMap((match) => {
+    if (seenUsers.has(match.matchedUserId)) return [];
+    seenUsers.add(match.matchedUserId);
+    const uniqueMeals = [...new Map(
+      match.possibleMeals.map((meal) => [meal.mealName.trim().toLowerCase(), meal]),
+    ).values()];
+    const freshIndex = uniqueMeals.findIndex(
+      (meal) => !usedMeals.has(meal.mealName.trim().toLowerCase()),
+    );
+    if (freshIndex > 0) {
+      uniqueMeals.unshift(...uniqueMeals.splice(freshIndex, 1));
+    }
+    if (uniqueMeals[0]) usedMeals.add(uniqueMeals[0].mealName.trim().toLowerCase());
+    const dedupeFoods = (foods: CookingMatch["yourContributions"]) =>
+      [...new Map(foods.map((food) => [food.name.trim().toLowerCase(), food])).values()];
+    return [{
+      ...match,
+      possibleMeals: uniqueMeals,
+      yourContributions: dedupeFoods(match.yourContributions),
+      theirContributions: dedupeFoods(match.theirContributions),
+    }];
+  });
 }
 function Primary({
   title,
@@ -392,13 +729,16 @@ function Secondary({
   title,
   onPress,
   disabled,
+  busy = false,
 }: {
   title: string;
   onPress: () => void;
   disabled?: boolean;
+  busy?: boolean;
 }) {
   return (
     <Pressable disabled={disabled} onPress={onPress} style={styles.secondary}>
+      {busy ? <ActivityIndicator color={colors.primary} size="small" /> : null}
       <Text style={styles.secondaryText}>{title}</Text>
     </Pressable>
   );
@@ -406,8 +746,11 @@ function Secondary({
 function Empty({ text }: { text: string }) {
   return (
     <View style={styles.empty}>
-      <Text style={styles.emptyTitle}>Nothing here yet</Text>
-      <Text style={styles.subtitle}>{text}</Text>
+      <View style={styles.emptyMark}>
+        <Ionicons color={colors.primary} name="restaurant-outline" size={30} />
+      </View>
+      <Text style={styles.emptyTitle}>The table is open</Text>
+      <Text style={styles.emptyBody}>{text}</Text>
     </View>
   );
 }
@@ -422,6 +765,24 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 48,
   },
+  embeddedContent: { paddingBottom: 132, paddingTop: 12 },
+  listHeading: {
+    alignItems: "center",
+    flexDirection: "row",
+    justifyContent: "space-between",
+    paddingHorizontal: 2,
+  },
+  listEyebrow: {
+    color: colors.secondary,
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 11,
+    letterSpacing: 1,
+  },
+  listCount: {
+    color: colors.textMuted,
+    fontFamily: "Inter_500Medium",
+    fontSize: 12,
+  },
   center: {
     alignItems: "center",
     backgroundColor: colors.background,
@@ -434,6 +795,18 @@ const styles = StyleSheet.create({
     fontFamily: "Inter_600SemiBold",
     fontSize: 15,
   },
+  inlineLoading: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: 9,
+    paddingHorizontal: 2,
+    paddingVertical: 12,
+  },
+  inlineLoadingText: {
+    color: colors.textMuted,
+    fontFamily: "Inter_500Medium",
+    fontSize: 13,
+  },
   header: { gap: 4 },
   subtitle: {
     color: colors.textMuted,
@@ -443,37 +816,94 @@ const styles = StyleSheet.create({
   },
   tabs: {
     backgroundColor: colors.surfaceHigh,
-    borderRadius: 12,
+    borderRadius: 16,
     flexDirection: "row",
     padding: 4,
   },
-  tab: { alignItems: "center", borderRadius: 9, flex: 1, paddingVertical: 9 },
-  activeTab: { backgroundColor: colors.surface },
+  stickyTabs: {
+    backgroundColor: colors.background,
+    paddingBottom: 8,
+    paddingTop: 4,
+    zIndex: 10,
+  },
+  tab: {
+    alignItems: "center",
+    borderRadius: 12,
+    flex: 1,
+    flexDirection: "row",
+    gap: 7,
+    justifyContent: "center",
+    minHeight: 42,
+  },
+  activeTab: { backgroundColor: colors.primary },
   tabText: {
     color: colors.textMuted,
     fontFamily: "Inter_500Medium",
-    fontSize: 12,
+    fontSize: 13,
   },
-  activeTabText: { color: colors.primary, fontFamily: "Inter_600SemiBold" },
+  activeTabText: { color: "#FFFFFF", fontFamily: "Inter_600SemiBold" },
+  skeletonList: { gap: 16 },
+  skeletonCard: {
+    backgroundColor: colors.surface,
+    borderColor: colors.surfaceHigh,
+    borderRadius: 22,
+    borderWidth: 1,
+    overflow: "hidden",
+  },
+  skeletonImage: {
+    backgroundColor: "#E6E9E3",
+    height: 292,
+    justifyContent: "space-between",
+    padding: 15,
+  },
+  skeletonPills: { flexDirection: "row", gap: 7 },
+  skeletonPill: { backgroundColor: "#D3D8D1", borderRadius: 14, height: 28, width: 82 },
+  skeletonMealName: { backgroundColor: "#D3D8D1", borderRadius: 7, height: 24, width: "68%" },
+  skeletonBody: { gap: 9, padding: 15 },
+  skeletonName: { backgroundColor: "#E2E6E0", borderRadius: 6, height: 18, width: "54%" },
+  skeletonSubtitle: { backgroundColor: "#ECEFEA", borderRadius: 5, height: 13, width: "38%" },
+  skeletonButtons: { flexDirection: "row", gap: 9, marginTop: 7 },
+  skeletonButton: { backgroundColor: "#E2E6E0", borderRadius: 14, flex: 1, height: 46 },
   matchCard: {
     backgroundColor: colors.surface,
     borderColor: colors.surfaceHigh,
+    borderRadius: 22,
+    borderWidth: 1,
+    overflow: "hidden",
+  },
+  cardBody: { gap: 14, padding: 15 },
+  cookIdentity: { gap: 4, paddingHorizontal: 2 },
+  cookName: {
+    color: colors.text,
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 16,
+  },
+  cookInspiration: {
+    color: colors.textMuted,
+    fontFamily: "Inter_400Regular",
+    fontSize: 12,
+    lineHeight: 17,
+  },
+  matchMeta: { alignItems: "center", flexDirection: "row", gap: 14 },
+  metaItem: { alignItems: "center", flexDirection: "row", gap: 5 },
+  metaText: {
+    color: colors.textMuted,
+    fontFamily: "Inter_400Regular",
+    fontSize: 11,
+  },
+  cardFooter: { gap: 15, padding: 16 },
+  ingredientsList: {
+    borderColor: colors.surfaceHigh,
     borderRadius: 16,
     borderWidth: 1,
+    paddingHorizontal: 13,
   },
-  cardBody: { gap: 16, padding: 16 },
-  meta: { flexDirection: "row", justifyContent: "space-between" },
-  rank: {
-    color: colors.secondary,
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 12,
-  },
-  distance: {
-    color: colors.secondary,
-    fontFamily: "Inter_500Medium",
-    fontSize: 12,
-  },
-  ingredient: { gap: 4 },
+  ingredient: { alignItems: "center", flexDirection: "row", gap: 10, paddingVertical: 11 },
+  ingredientMark: { borderRadius: 5, height: 10, width: 10 },
+  yourMark: { backgroundColor: colors.primary },
+  theirMark: { backgroundColor: colors.accent },
+  ingredientCopy: { flex: 1, gap: 3 },
+  ingredientDivider: { backgroundColor: colors.surfaceHigh, height: 1 },
   sectionLabel: {
     color: colors.secondary,
     fontFamily: "Inter_600SemiBold",
@@ -483,42 +913,98 @@ const styles = StyleSheet.create({
   ingredientText: {
     color: colors.text,
     fontFamily: "Inter_400Regular",
-    fontSize: 14,
-    lineHeight: 20,
-  },
-  mealRow: {
-    backgroundColor: colors.surfaceLow,
-    borderRadius: 12,
-    flexDirection: "row",
-    gap: 12,
-    padding: 8,
-  },
-  mealImage: {
-    backgroundColor: colors.surfaceHigh,
-    borderRadius: 8,
-    height: 82,
-    width: 82,
-  },
-  mealCopy: { flex: 1, gap: 2, justifyContent: "center" },
-  mealName: {
-    color: colors.primary,
-    fontFamily: "Inter_600SemiBold",
-    fontSize: 16,
-  },
-  mealDescription: {
-    color: colors.textMuted,
-    fontFamily: "Inter_400Regular",
     fontSize: 12,
     lineHeight: 17,
   },
-  actions: { flexDirection: "row", gap: 8 },
+  mealFeature: { backgroundColor: colors.surfaceLow, position: "relative" },
+  mealImage: { backgroundColor: colors.surfaceHigh, height: 292, width: "100%" },
+  mealImageFallback: { alignItems: "center", justifyContent: "center" },
+  mealGradient: {
+    bottom: 0,
+    justifyContent: "space-between",
+    left: 0,
+    padding: 15,
+    position: "absolute",
+    right: 0,
+    top: 0,
+  },
+  mealName: {
+    color: "#FFFFFF",
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 25,
+    lineHeight: 29,
+  },
+  imageMetaRow: { flexDirection: "row", gap: 7 },
+  imageMetaPill: {
+    alignItems: "center",
+    backgroundColor: "rgba(13, 28, 20, 0.72)",
+    borderRadius: 14,
+    flexDirection: "row",
+    gap: 4,
+    minHeight: 28,
+    paddingHorizontal: 9,
+  },
+  imageMetaText: {
+    color: "#FFFFFF",
+    fontFamily: "Inter_500Medium",
+    fontSize: 11,
+  },
+  mealTitleBlock: { gap: 3 },
+  mealAttribution: {
+    color: colors.textMuted,
+    fontFamily: "Inter_400Regular",
+    fontSize: 9,
+    paddingHorizontal: 8,
+    position: "absolute",
+    right: 0,
+    textShadowColor: "#000000",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+    top: 4,
+  },
+  mealDescription: {
+    color: "#F0EEE7",
+    fontFamily: "Inter_400Regular",
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  actions: { flexDirection: "row", gap: 9, marginTop: 2 },
+  waitingRow: {
+    alignItems: "center",
+    backgroundColor: colors.surfaceLow,
+    borderRadius: 14,
+    flexDirection: "row",
+    gap: 7,
+    justifyContent: "center",
+    minHeight: 46,
+  },
+  waitingText: {
+    color: colors.textMuted,
+    fontFamily: "Inter_500Medium",
+    fontSize: 12,
+  },
+  legacyConnectionCard: { display: "none" },
+  planButton: {
+    alignItems: "center",
+    backgroundColor: colors.primary,
+    borderRadius: 14,
+    flexDirection: "row",
+    gap: 7,
+    justifyContent: "center",
+    minHeight: 46,
+  },
+  planButtonText: {
+    color: "#FFFFFF",
+    fontFamily: "Inter_600SemiBold",
+    fontSize: 13,
+  },
   primary: {
     alignItems: "center",
     backgroundColor: colors.primary,
-    borderRadius: 12,
+    borderRadius: 14,
     flex: 1,
     justifyContent: "center",
-    minHeight: 48,
+    minHeight: 46,
     paddingHorizontal: 10,
   },
   primaryText: {
@@ -529,10 +1015,14 @@ const styles = StyleSheet.create({
   secondary: {
     alignItems: "center",
     backgroundColor: colors.secondaryContainer,
-    borderRadius: 12,
+    borderColor: colors.surfaceHigh,
+    borderRadius: 14,
+    borderWidth: 1,
     flex: 1,
+    flexDirection: "row",
+    gap: 7,
     justifyContent: "center",
-    minHeight: 48,
+    minHeight: 46,
     paddingHorizontal: 10,
   },
   secondaryText: {
@@ -559,14 +1049,32 @@ const styles = StyleSheet.create({
     alignItems: "center",
     backgroundColor: colors.surface,
     borderColor: colors.surfaceHigh,
-    borderRadius: 16,
+    borderRadius: 24,
     borderWidth: 1,
-    gap: 8,
+    gap: 12,
+    marginTop: 4,
     padding: 24,
+  },
+  emptyMark: {
+    alignItems: "center",
+    backgroundColor: colors.secondaryContainer,
+    borderRadius: 24,
+    height: 64,
+    justifyContent: "center",
+    marginBottom: 4,
+    width: 64,
   },
   emptyTitle: {
     color: colors.text,
     fontFamily: "Inter_600SemiBold",
-    fontSize: 18,
+    fontSize: 20,
+  },
+  emptyBody: {
+    color: colors.textMuted,
+    fontFamily: "Inter_400Regular",
+    fontSize: 14,
+    lineHeight: 21,
+    maxWidth: 280,
+    textAlign: "center",
   },
 });
